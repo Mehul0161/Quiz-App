@@ -1,0 +1,16 @@
+[
+  {
+    "id": "1754977403270",
+    "username": "Mehul ",
+    "email": "mehul.gupta.56614@gmail.com",
+    "totalEarnings": 1040000,
+    "gamesPlayed": 13,
+    "highestScore": 1000000,
+    "achievements": [
+      "First Game",
+      "Veteran Player",
+      "Millionaire"
+    ],
+    "createdAt": "2025-08-12T05:43:23.270Z"
+  }
+]

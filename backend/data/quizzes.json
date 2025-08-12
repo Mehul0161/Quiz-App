@@ -1,0 +1,119 @@
+[
+  {
+    "id": "1754983387032",
+    "userId": "1754977403270",
+    "category": "Science & Technology",
+    "questionsAnswered": 0,
+    "earnings": 0,
+    "isWinner": false,
+    "completedAt": "2025-08-12T07:23:07.032Z"
+  },
+  {
+    "id": "1754983402767",
+    "userId": "1754977403270",
+    "category": "Science & Technology",
+    "questionsAnswered": 0,
+    "earnings": 0,
+    "isWinner": false,
+    "completedAt": "2025-08-12T07:23:22.767Z"
+  },
+  {
+    "id": "1754986123414",
+    "userId": "1754977403270",
+    "category": "Literature",
+    "questionsAnswered": 0,
+    "earnings": 0,
+    "isWinner": false,
+    "completedAt": "2025-08-12T08:08:43.414Z"
+  },
+  {
+    "id": "1754986136387",
+    "userId": "1754977403270",
+    "category": "Literature",
+    "questionsAnswered": 0,
+    "earnings": 0,
+    "isWinner": false,
+    "completedAt": "2025-08-12T08:08:56.387Z"
+  },
+  {
+    "id": "1754986160791",
+    "userId": "1754977403270",
+    "category": "Literature",
+    "questionsAnswered": 0,
+    "earnings": 0,
+    "isWinner": false,
+    "completedAt": "2025-08-12T08:09:20.791Z"
+  },
+  {
+    "id": "1754988605608",
+    "userId": "1754977403270",
+    "category": "Mathematics",
+    "questionsAnswered": 0,
+    "earnings": 0,
+    "isWinner": false,
+    "completedAt": "2025-08-12T08:50:05.608Z"
+  },
+  {
+    "id": "1754990268832",
+    "userId": "1754977403270",
+    "category": "Art & Culture",
+    "questionsAnswered": 0,
+    "earnings": 0,
+    "isWinner": false,
+    "completedAt": "2025-08-12T09:17:48.832Z"
+  },
+  {
+    "id": "1754991774869",
+    "userId": "1754977403270",
+    "category": "General Knowledge",
+    "questionsAnswered": 0,
+    "earnings": 0,
+    "isWinner": false,
+    "completedAt": "2025-08-12T09:42:54.869Z"
+  },
+  {
+    "id": "1754993475940",
+    "userId": "1754977403270",
+    "category": "Entertainment",
+    "questionsAnswered": 0,
+    "earnings": 0,
+    "isWinner": false,
+    "completedAt": "2025-08-12T10:11:15.940Z"
+  },
+  {
+    "id": "1754993868310",
+    "userId": "1754977403270",
+    "category": "Mathematics",
+    "questionsAnswered": 0,
+    "earnings": 0,
+    "isWinner": false,
+    "completedAt": "2025-08-12T10:17:48.310Z"
+  },
+  {
+    "id": "1754994141597",
+    "userId": "1754977403270",
+    "category": "Mathematics",
+    "questionsAnswered": 8,
+    "earnings": 8000,
+    "isWinner": false,
+    "completedAt": "2025-08-12T10:22:21.597Z"
+  },
+  {
+    "id": "1754994787154",
+    "userId": "1754977403270",
+    "category": "Mathematics",
+    "questionsAnswered": 15,
+    "earnings": 1000000,
+    "isWinner": true,
+    "completedAt": "2025-08-12T10:33:07.154Z"
+  },
+  {
+    "id": "1754995145092",
+    "userId": "1754977403270",
+    "category": "Mathematics",
+    "questionsAnswered": 10,
+    "earnings": 32000,
+    "isWinner": false,
+    "completedAt": "2025-08-12T10:39:05.092Z"
+  }
+]
