@@ -14,47 +14,25 @@ const PORT = process.env.PORT || 3000;
 const geminiService = new GeminiService();
 
 // Middleware
-// Configure CORS to support specific production origins and dev
-const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
-  .split(',')
-  .map(o => o.trim())
-  .filter(Boolean);
-
-// Always include common dev origins if not already present
-['http://localhost:5173', 'http://localhost:3000'].forEach(devOrigin => {
-  if (!allowedOrigins.includes(devOrigin)) allowedOrigins.push(devOrigin);
-});
-
+// Permissive CORS: allow all origins (no credentials). Safe for public JSON APIs
 const corsOptions = {
-  origin: function(origin, callback) {
-    if (!origin) return callback(null, true); // allow non-browser requests
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: true, // reflect request origin or '*' when no origin
+  credentials: false, // required for '*' compatibility
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 };
 
 app.use(cors(corsOptions));
 // Handle preflight without wildcard route patterns to avoid path-to-regexp errors
 app.use((req, res, next) => {
-    if (req.method === 'OPTIONS') {
-        const requestOrigin = req.headers.origin;
-        if (!requestOrigin) {
-            return res.sendStatus(204);
-        }
-        if (allowedOrigins.includes(requestOrigin)) {
-            res.header('Access-Control-Allow-Origin', requestOrigin);
-            res.header('Vary', 'Origin');
-            res.header('Access-Control-Allow-Credentials', 'true');
-            res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-            res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-            return res.sendStatus(204);
-        }
-        return res.status(403).send('Not allowed by CORS');
-    }
-    next();
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.header('Access-Control-Max-Age', '86400');
+    return res.sendStatus(204);
+  }
+  next();
 });
 app.use(express.json());
 
