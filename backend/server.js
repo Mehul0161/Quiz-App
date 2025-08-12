@@ -513,7 +513,7 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Start server
+// Start server (disabled on Vercel serverless)
 async function startServer() {
     await initializeData();
     app.listen(PORT, () => {
@@ -522,4 +522,8 @@ async function startServer() {
     });
 }
 
-startServer().catch(console.error);
+if (!process.env.VERCEL) {
+  startServer().catch(console.error);
+}
+
+module.exports = app;
