@@ -23,17 +23,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-// Handle preflight without wildcard route patterns to avoid path-to-regexp errors
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    res.header('Access-Control-Max-Age', '86400');
-    return res.sendStatus(204);
-  }
-  next();
-});
 app.use(express.json());
 
 // In-memory database (for development - replace with real database in production)
