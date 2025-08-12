@@ -23,6 +23,13 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+// Ensure all responses include CORS headers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  next();
+});
 // Handle preflight without wildcard route patterns to avoid path-to-regexp errors
 app.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
