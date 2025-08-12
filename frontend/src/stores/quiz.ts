@@ -82,7 +82,7 @@ export const useQuizStore = defineStore('quiz', {
       return nextQuestion?.prizeValue || 0
     },
 
-    safeHavenIndices: (state) => {
+    safeHavenIndices: () => {
       return [4, 9, 14] // Q5, Q10, Q15 (0-based)
     }
   },

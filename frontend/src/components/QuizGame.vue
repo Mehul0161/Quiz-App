@@ -155,7 +155,7 @@ const currentLifeline = ref<'50-50' | 'audience' | 'friend' | ''>('')
 const lifelineResultTitle = ref('')
 const audiencePoll = ref<Record<string, string>>({})
 const friendAdvice = ref('')
-const hiddenOptions = ref<string[]>([])
+const hiddenOptions = ref<Array<'A' | 'B' | 'C' | 'D'>>([])
 
 const currentQuestion = computed(() => quizStore.currentQuestion)
 const prizeValue = computed(() => quizStore.prizeStructure[quizStore.currentQuestionIndex] || 0)
@@ -228,11 +228,15 @@ const confirmOrSelect = (answer: 'A' | 'B' | 'C' | 'D') => {
   }
 }
 
-const getVisibleOptions = () => !currentQuestion.value ? [] : Object.keys(currentQuestion.value.options).filter(k => !hiddenOptions.value.includes(k))
+const getVisibleOptions = (): Array<'A' | 'B' | 'C' | 'D'> => {
+  if (!currentQuestion.value) return []
+  const keys = Object.keys(currentQuestion.value.options) as Array<'A' | 'B' | 'C' | 'D'>
+  return keys.filter(k => !hiddenOptions.value.includes(k))
+}
 
 const useLifeline = (type: '50-50' | 'audience' | 'friend') => {
   const lifelines = currentQuestion.value!.lifelines
-  if (type === '50-50') hiddenOptions.value = lifelines['50-50']
+  if (type === '50-50') hiddenOptions.value = lifelines['50-50'] as Array<'A' | 'B' | 'C' | 'D'>
   if (type === 'audience') audiencePoll.value = lifelines.audience
   if (type === 'friend') friendAdvice.value = lifelines.friend
 }
@@ -266,7 +270,7 @@ const walkAway = () => {
 
 const getAnswerClass = (option: 'A' | 'B' | 'C' | 'D') => {
   if (showingResult.value) {
-    const correct = currentQuestion.value?.correctAnswer || currentQuestion.value?.correct_answer
+    const correct = currentQuestion.value?.correctAnswer
     if (option === correct) return 'bg-green-600/50 border-green-500 text-white'
     if (selectedAnswer.value === option) return 'bg-red-600/50 border-red-500 text-white'
   }

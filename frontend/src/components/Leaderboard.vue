@@ -51,11 +51,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useUserStore } from '../stores/user'
 import axios from 'axios'
 import { API_BASE_URL } from '../config'
-
-const userStore = useUserStore()
 
 interface LeaderboardEntry {
   rank: number

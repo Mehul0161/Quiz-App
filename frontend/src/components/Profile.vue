@@ -195,53 +195,6 @@ const formatDate = (dateString?: string) => {
   })
 }
 
-const getAverageEarnings = () => {
-  const user = userStore.currentUser
-  if (!user || user.gamesPlayed === 0) return '0'
-  return Math.round(user.totalEarnings / user.gamesPlayed).toLocaleString()
-}
-
-const getSuccessRate = () => {
-  const user = userStore.currentUser
-  if (!user || user.gamesPlayed === 0) return '0'
-  // This is a simplified calculation - in a real app you'd track wins/losses
-  const rate = Math.min(100, Math.round((user.totalEarnings / (user.gamesPlayed * 100000)) * 100))
-  return rate
-}
-
-const isMillionaire = () => {
-  return userStore.currentUser?.achievements.includes('Millionaire') || false
-}
-
-const getMillionaireProgress = () => {
-  const earnings = userStore.currentUser?.totalEarnings || 0
-  return Math.min(100, Math.round((earnings / 1000000) * 100))
-}
-
-const getAchievementIcon = (achievement: string) => {
-  const icons: Record<string, string> = {
-    'Millionaire': '💰',
-    'First Game': '🎯',
-    'Veteran Player': '🏆',
-    'High Roller': '💎',
-    'Quiz Master': '🧠',
-    'Lucky Winner': '🍀'
-  }
-  return icons[achievement] || '🏅'
-}
-
-const getAchievementDescription = (achievement: string) => {
-  const descriptions: Record<string, string> = {
-    'Millionaire': 'Won the grand prize of $1,000,000!',
-    'First Game': 'Completed your first quiz game',
-    'Veteran Player': 'Played 10 or more quiz games',
-    'High Roller': 'Earned over $100,000 in total',
-    'Quiz Master': 'Answered 100+ questions correctly',
-    'Lucky Winner': 'Won a game on your first try'
-  }
-  return descriptions[achievement] || 'Special achievement unlocked!'
-}
-
 const getWinRate = () => {
   const user = userStore.currentUser
   if (!user || user.gamesPlayed === 0) return 0
@@ -266,53 +219,7 @@ const getProgressPercentage = () => {
   return Math.min(100, Math.round((earnings / 1000000) * 100))
 }
 
-const getAchievements = () => {
-  const achievements = [
-    {
-      id: 'first-game',
-      title: 'Neural Initiation',
-      description: 'Completed first quantum protocol',
-      icon: '🎯',
-      unlocked: (userStore.currentUser?.gamesPlayed || 0) > 0
-    },
-    {
-      id: 'high-earner',
-      title: 'Wealth Accumulator',
-      description: 'Earned over $50,000 in total',
-      icon: '💰',
-      unlocked: (userStore.currentUser?.totalEarnings || 0) >= 50000
-    },
-    {
-      id: 'veteran',
-      title: 'Quantum Veteran',
-      description: 'Completed 10+ neural sessions',
-      icon: '🏆',
-      unlocked: (userStore.currentUser?.gamesPlayed || 0) >= 10
-    },
-    {
-      id: 'high-roller',
-      title: 'Digital Elite',
-      description: 'Earned over $100,000 total',
-      icon: '💎',
-      unlocked: (userStore.currentUser?.totalEarnings || 0) >= 100000
-    },
-    {
-      id: 'millionaire',
-      title: 'Digital Immortal',
-      description: 'Achieved transcendence ($1M)',
-      icon: '👑',
-      unlocked: (userStore.currentUser?.totalEarnings || 0) >= 1000000
-    },
-    {
-      id: 'perfect-score',
-      title: 'Quantum Perfection',
-      description: 'Achieved maximum score in session',
-      icon: '⚡',
-      unlocked: (userStore.currentUser?.highestScore || 0) >= 1000000
-    }
-  ]
-  return achievements
-}
+// Removed unused helper functions
 </script>
 
 <style scoped>

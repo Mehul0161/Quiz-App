@@ -399,8 +399,25 @@ app.post('/api/quiz/generate', async (req, res) => {
         console.log('Falling back to basic quiz generation...');
         try {
             const fallbackQuestions = generateFallbackQuestions(category);
+            // Transform fallback to frontend's expected schema
+            const transformedFallback = fallbackQuestions.map((q, index) => ({
+                id: `${Date.now()}_${index}`,
+                question: q.question,
+                options: q.options,
+                correctAnswer: q.correct_answer,
+                difficulty: q.difficulty_level,
+                explanation: q.explanation,
+                category: category,
+                questionNumber: index + 1,
+                prizeValue: PRIZE_STRUCTURE[index],
+                lifelines: {
+                    '50-50': q.lifelines.fifty_fifty,
+                    audience: q.lifelines.audience_poll,
+                    friend: q.lifelines.phone_a_friend
+                }
+            }));
             res.json({ 
-                questions: fallbackQuestions,
+                questions: transformedFallback,
                 category,
                 totalQuestions: 15,
                 prizeStructure: PRIZE_STRUCTURE
