@@ -14,10 +14,48 @@ const PORT = process.env.PORT || 3000;
 const geminiService = new GeminiService();
 
 // Middleware
-app.use(cors({
-    origin: process.env.FRONTEND_ORIGIN || '*',
-    credentials: true,
-}));
+// Configure CORS to support specific production origins and dev
+const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
+// Always include common dev origins if not already present
+['http://localhost:5173', 'http://localhost:3000'].forEach(devOrigin => {
+  if (!allowedOrigins.includes(devOrigin)) allowedOrigins.push(devOrigin);
+});
+
+const corsOptions = {
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true); // allow non-browser requests
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
+// Handle preflight without wildcard route patterns to avoid path-to-regexp errors
+app.use((req, res, next) => {
+    if (req.method === 'OPTIONS') {
+        const requestOrigin = req.headers.origin;
+        if (!requestOrigin) {
+            return res.sendStatus(204);
+        }
+        if (allowedOrigins.includes(requestOrigin)) {
+            res.header('Access-Control-Allow-Origin', requestOrigin);
+            res.header('Vary', 'Origin');
+            res.header('Access-Control-Allow-Credentials', 'true');
+            res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+            res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            return res.sendStatus(204);
+        }
+        return res.status(403).send('Not allowed by CORS');
+    }
+    next();
+});
 app.use(express.json());
 
 // In-memory database (for development - replace with real database in production)

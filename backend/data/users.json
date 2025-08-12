@@ -12,5 +12,15 @@
       "Millionaire"
     ],
     "createdAt": "2025-08-12T05:43:23.270Z"
+  },
+  {
+    "id": "1755000502186",
+    "username": "test",
+    "email": "test@gmail.com",
+    "totalEarnings": 0,
+    "gamesPlayed": 0,
+    "highestScore": 0,
+    "achievements": [],
+    "createdAt": "2025-08-12T12:08:22.186Z"
   }
 ]
