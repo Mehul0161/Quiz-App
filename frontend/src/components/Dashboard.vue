@@ -1,92 +1,130 @@
 <template>
-  <div class="min-h-screen bg-gray-900">
-    <div class="max-w-6xl mx-auto px-3 py-8">
-      <div class="bg-black/20 rounded-md border border-gray-700 p-4 mb-6">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-indigo-600 rounded-md grid place-items-center text-white text-lg font-bold">
-              {{ userStore.currentUser?.username.charAt(0).toUpperCase() }}
-            </div>
-            <div>
-              <h1 class="text-xl font-extrabold text-white">Game Console</h1>
-              <p class="text-gray-400 text-xs">Welcome, {{ userStore.currentUser?.username }}</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <router-link to="/leaderboard" class="px-3 py-1.5 bg-gray-700/50 hover:bg-gray-700 text-gray-300 rounded text-xs border border-gray-600">Leaderboard</router-link>
-            <button @click="logout" class="px-3 py-1.5 bg-red-900/40 hover:bg-red-900/60 text-red-300 rounded text-xs border border-red-500/20">Logout</button>
-          </div>
-        </div>
-      </div>
+	<div class="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 p-4">
+		<div class="max-w-6xl mx-auto">
+			<!-- Header -->
+			<div class="text-center mb-8">
+				<h1 class="text-4xl md:text-5xl font-bold text-white mb-4 animate-float">
+					👋 Welcome, {{ userStore.currentUser?.username }}!
+				</h1>
+				<p class="text-xl text-neutral-400">Ready to become a millionaire? Your journey starts here!</p>
+			</div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="lg:col-span-2 bg-black/20 rounded-md border border-gray-700 p-5">
-          <div class="text-center mb-5">
-            <div class="text-gray-400 text-xs mb-1">Next Objective</div>
-            <div class="text-2xl font-extrabold text-white">Become a Millionaire</div>
-          </div>
-          <div class="flex flex-col sm:flex-row justify-center gap-3 mb-5">
-            <router-link to="/setup" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded text-sm">Start New Game</router-link>
-            <router-link to="/game" class="px-6 py-2.5 bg-gray-700/50 hover:bg-gray-700 text-white font-semibold rounded text-sm border border-gray-600">Resume</router-link>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="bg-gray-800/30 border border-gray-700 rounded p-4 text-center">
-              <div class="text-2xl mb-1">💰</div>
-              <div class="text-xl font-extrabold text-white">${{ userStore.currentUser?.totalEarnings.toLocaleString() || 0 }}</div>
-              <div class="text-gray-400 text-xs">Total Earnings</div>
-            </div>
-            <div class="bg-gray-800/30 border border-gray-700 rounded p-4 text-center">
-              <div class="text-2xl mb-1">🎮</div>
-              <div class="text-xl font-extrabold text-white">{{ userStore.currentUser?.gamesPlayed || 0 }}</div>
-              <div class="text-gray-400 text-xs">Games Played</div>
-            </div>
-            <div class="bg-gray-800/30 border border-gray-700 rounded p-4 text-center">
-              <div class="text-2xl mb-1">🏆</div>
-              <div class="text-xl font-extrabold text-white">${{ userStore.currentUser?.highestScore?.toLocaleString() || 0 }}</div>
-              <div class="text-gray-400 text-xs">Best Score</div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="space-y-3">
-          <div class="bg-black/20 rounded-md border border-gray-700 p-4">
-            <h3 class="text-white font-bold mb-2 text-sm">Quick Links</h3>
-            <div class="flex flex-col gap-2">
-              <router-link to="/setup" class="px-3 py-1.5 bg-gray-700/50 hover:bg-gray-700 text-gray-200 rounded border border-gray-600 text-xs">Choose Category</router-link>
-              <router-link to="/leaderboard" class="px-3 py-1.5 bg-gray-700/50 hover:bg-gray-700 text-gray-200 rounded border border-gray-600 text-xs">Leaderboard</router-link>
-              <router-link to="/profile" class="px-3 py-1.5 bg-gray-700/50 hover:bg-gray-700 text-gray-200 rounded border border-gray-600 text-xs">Profile</router-link>
-            </div>
-          </div>
-          <div class="bg-black/20 rounded-md border border-gray-700 p-4">
-            <h3 class="text-white font-bold mb-2 text-sm">Rules Recap</h3>
-            <ul class="list-disc list-inside text-gray-300 space-y-1 text-xs">
-              <li>15 questions, progressive difficulty.</li>
-              <li>50:50, Audience, Friend (once each).</li>
-              <li>Walk away anytime.</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+			<!-- Main Stats -->
+			<div class="card border-2 border-neutral-700 mb-8">
+				<div class="flex flex-col md:flex-row items-center gap-6 mb-6">
+					<div class="w-24 h-24 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full grid place-items-center text-white text-4xl font-bold shadow-lg animate-glow">
+						{{ userStore.currentUser?.username.charAt(0).toUpperCase() }}
+					</div>
+					<div class="text-center md:text-left flex-1">
+						<h2 class="text-3xl font-bold text-white mb-2">{{ userStore.currentUser?.username }}</h2>
+						<p class="text-neutral-400">Member since {{ formatDate(userStore.currentUser?.createdAt) }}</p>
+					</div>
+					<div>
+						<button @click="logout" class="btn-secondary px-6 py-3 font-bold hover:scale-105 transform transition-all duration-300">
+							🚪 Logout
+						</button>
+					</div>
+				</div>
+
+				<div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+					<div class="text-center card-compact border-2 border-yellow-500/30 bg-yellow-500/5 hover:scale-105 transform transition-all duration-300 hover:shadow-lg">
+						<div class="text-5xl mb-3 animate-float">💰</div>
+						<div class="text-sm text-neutral-300 mb-1">Total Earnings</div>
+						<div class="text-2xl font-bold text-yellow-400">${{ userStore.currentUser?.totalEarnings.toLocaleString() || 0 }}</div>
+					</div>
+
+					<div class="text-center card-compact border-2 border-blue-500/30 bg-blue-500/5 hover:scale-105 transform transition-all duration-300 hover:shadow-lg">
+						<div class="text-5xl mb-3 animate-float">🎮</div>
+						<div class="text-sm text-neutral-300 mb-1">Games Played</div>
+						<div class="text-2xl font-bold text-blue-400">{{ userStore.currentUser?.gamesPlayed || 0 }}</div>
+					</div>
+
+					<div class="text-center card-compact border-2 border-green-500/30 bg-green-500/5 hover:scale-105 transform transition-all duration-300 hover:shadow-lg">
+						<div class="text-5xl mb-3 animate-float">🏆</div>
+						<div class="text-sm text-neutral-300 mb-1">Best Score</div>
+						<div class="text-2xl font-bold text-green-400">${{ userStore.currentUser?.highestScore?.toLocaleString() || 0 }}</div>
+					</div>
+
+					<div class="text-center card-compact border-2 border-purple-500/30 bg-purple-500/5 hover:scale-105 transform transition-all duration-300 hover:shadow-lg">
+						<div class="text-5xl mb-3 animate-float">📈</div>
+						<div class="text-sm text-neutral-300 mb-1">Success Rate</div>
+						<div class="text-2xl font-bold text-purple-400">{{ getWinRate() }}%</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Quick Actions -->
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+				<router-link to="/setup" class="card border-2 border-indigo-500/50 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 hover:from-indigo-600/30 hover:to-purple-600/30 text-white p-8 text-center transition-all duration-300 hover:scale-105 transform hover:shadow-2xl group">
+					<div class="text-6xl mb-4 group-hover:animate-float">🎮</div>
+					<h3 class="text-2xl font-bold mb-3">Start New Game</h3>
+					<p class="text-neutral-200 text-lg mb-4">Begin your journey to $1,000,000</p>
+					<div class="inline-flex items-center gap-2 text-indigo-300 font-semibold">
+						Play Now <span class="group-hover:translate-x-1 transition-transform">→</span>
+					</div>
+				</router-link>
+
+				<router-link to="/leaderboard" class="card border-2 border-yellow-500/50 bg-gradient-to-br from-yellow-600/20 to-orange-600/20 hover:from-yellow-600/30 hover:to-orange-600/30 text-white p-8 text-center transition-all duration-300 hover:scale-105 transform hover:shadow-2xl group">
+					<div class="text-6xl mb-4 group-hover:animate-float">🏆</div>
+					<h3 class="text-2xl font-bold mb-3">View Leaderboard</h3>
+					<p class="text-neutral-200 text-lg mb-4">See how you rank among others</p>
+					<div class="inline-flex items-center gap-2 text-yellow-300 font-semibold">
+						Check Rankings <span class="group-hover:translate-x-1 transition-transform">→</span>
+					</div>
+				</router-link>
+			</div>
+
+			<!-- Recent Activity -->
+			<div class="card">
+				<h3 class="text-lg font-bold text-white mb-4">Recent Activity</h3>
+				<div v-if="userStore.currentUser?.gamesPlayed === 0" class="text-center text-neutral-400 py-8">
+					<div class="text-5xl mb-3">🎯</div>
+					<p>No games played yet. Start your first game!</p>
+				</div>
+				<div v-else class="space-y-3">
+					<div class="flex items-center justify-between p-4 bg-neutral-800 rounded-lg border border-neutral-700">
+						<div class="flex items-center gap-4">
+							<div class="w-10 h-10 bg-indigo-600 rounded-full grid place-items-center text-white text-lg font-bold">🎮</div>
+							<div>
+								<div class="font-semibold text-white">Last Game</div>
+								<div class="text-sm text-neutral-400">Earned ${{ userStore.currentUser?.highestScore?.toLocaleString() || 0 }}</div>
+							</div>
+						</div>
+						<div class="text-right">
+							<div class="text-sm text-neutral-400">Best Score</div>
+							<div class="font-bold text-green-400">${{ userStore.currentUser?.highestScore?.toLocaleString() || 0 }}</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 
 const router = useRouter()
 const userStore = useUserStore()
 
-const logout = () => {
-  userStore.logout()
-  router.push('/')
+const getWinRate = () => {
+	if (!userStore.currentUser?.gamesPlayed || userStore.currentUser.gamesPlayed === 0) return 0
+	// Simple calculation - you can make this more sophisticated
+	return Math.round((userStore.currentUser.totalEarnings / (userStore.currentUser.gamesPlayed * 1000)) * 100)
 }
 
-onMounted(() => {
-  if (!userStore.isLoggedIn) {
-    router.push('/')
-  }
-})
+const formatDate = (dateString?: string) => {
+	if (!dateString) return 'Unknown'
+	return new Date(dateString).toLocaleDateString('en-US', {
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric',
+	})
+}
+
+const logout = () => {
+	userStore.logout()
+	router.push('/login')
+}
 </script>

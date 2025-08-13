@@ -1,15 +1,22 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const mongoService = require('./mongoService');
 
 class GeminiService {
     constructor() {
         this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         this.model = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
         this.initialized = false;
+        this.questionPool = new Map(); // Cache for questions by category
     }
 
     async initialize() {
         if (!this.initialized) {
-            console.log('Gemini Service Initialized');
+            try {
+                await mongoService.connect();
+                console.log('Gemini Service Initialized with MongoDB connection');
+            } catch (error) {
+                console.warn('MongoDB connection failed, continuing without database:', error.message);
+            }
             this.initialized = true;
         }
     }
@@ -19,14 +26,38 @@ class GeminiService {
             await this.initialize();
         }
 
+        // Try to get varied questions from database first
+        const existingQuestions = await this.getQuestionsFromDB(category);
+        if (existingQuestions && existingQuestions.length >= 50) {
+            console.log(`Using varied questions from database for category: ${category}`);
+            return this.selectRandomQuestions(existingQuestions, category);
+        }
+
+        // Generate new questions if not enough in database
+        return await this.generateNewQuestions(category);
+    }
+
+    async generateNewQuestions(category) {
         const prizeStructure = [
             100, 200, 300, 500, 1000,
             2000, 4000, 8000, 16000, 32000,
             64000, 125000, 250000, 500000, 1000000
         ];
 
+        // Generate multiple variations to increase variety
+        const variations = [
+            'current events and recent developments',
+            'historical facts and famous personalities',
+            'scientific discoveries and innovations',
+            'cultural aspects and traditions',
+            'lesser-known facts and trivia'
+        ];
+
+        const randomVariation = variations[Math.floor(Math.random() * variations.length)];
+
         const prompt = `
-            Generate a complete "Who Wants to Be a Millionaire" game with 15 questions for the category: "${category}".
+            Generate a complete "Who Wants to Be a Millionaire" game with 15 UNIQUE and DIVERSE questions for the category: "${category}".
+            Focus on ${randomVariation} within this category to ensure maximum variety and avoid repetitive questions.
             The response MUST be a single valid JSON object. Do not include any text, markdown, or code formatting before or after the JSON object.
 
             The JSON structure must follow this exact format:
@@ -99,6 +130,10 @@ class GeminiService {
             }
 
             console.log('Successfully generated and parsed quiz.');
+            
+            // Save questions to database for future use
+            await this.saveQuestionsToDatabase(parsedJson.content.questions, category);
+            
             return parsedJson;
             
         } catch (error) {
@@ -151,6 +186,168 @@ class GeminiService {
                 ]
             }
         };
+    }
+
+    // Database methods for question storage and retrieval
+    async saveQuestionsToDatabase(questions, category) {
+        try {
+            if (!mongoService.isConnected) {
+                console.log('MongoDB not connected, skipping question save');
+                return;
+            }
+
+            const questionsCollection = mongoService.getCollection('questions');
+            const questionsToSave = questions.map(q => ({
+                ...q,
+                category: category,
+                createdAt: new Date(),
+                used: false
+            }));
+
+            await questionsCollection.insertMany(questionsToSave);
+            console.log(`Saved ${questions.length} questions for category: ${category}`);
+        } catch (error) {
+            console.error('Error saving questions to database:', error.message);
+        }
+    }
+
+    async getQuestionsFromDB(category) {
+        try {
+            if (!mongoService.isConnected) {
+                return null;
+            }
+
+            const questionsCollection = mongoService.getCollection('questions');
+            const questions = await questionsCollection.find({ 
+                category: category 
+            }).toArray();
+
+            return questions;
+        } catch (error) {
+            console.error('Error fetching questions from database:', error.message);
+            return null;
+        }
+    }
+
+    selectRandomQuestions(questionPool, category) {
+        // Organize questions by difficulty
+        const easy = questionPool.filter(q => q.difficulty_level === 'easy');
+        const medium = questionPool.filter(q => q.difficulty_level === 'medium');
+        const hard = questionPool.filter(q => q.difficulty_level === 'hard');
+        const veryHard = questionPool.filter(q => q.difficulty_level === 'very hard');
+
+        // Select random questions maintaining the difficulty progression
+        const selectedQuestions = [];
+        const prizeStructure = [
+            100, 200, 300, 500, 1000,
+            2000, 4000, 8000, 16000, 32000,
+            64000, 125000, 250000, 500000, 1000000
+        ];
+
+        // Questions 1-4: Easy
+        for (let i = 0; i < 4; i++) {
+            if (easy.length > 0) {
+                const randomIndex = Math.floor(Math.random() * easy.length);
+                const question = easy.splice(randomIndex, 1)[0];
+                selectedQuestions.push({
+                    ...question,
+                    question_number: (i + 1).toString(),
+                    prize_amount: prizeStructure[i].toString()
+                });
+            }
+        }
+
+        // Questions 5-8: Medium
+        for (let i = 4; i < 8; i++) {
+            if (medium.length > 0) {
+                const randomIndex = Math.floor(Math.random() * medium.length);
+                const question = medium.splice(randomIndex, 1)[0];
+                selectedQuestions.push({
+                    ...question,
+                    question_number: (i + 1).toString(),
+                    prize_amount: prizeStructure[i].toString()
+                });
+            }
+        }
+
+        // Questions 9-12: Hard
+        for (let i = 8; i < 12; i++) {
+            if (hard.length > 0) {
+                const randomIndex = Math.floor(Math.random() * hard.length);
+                const question = hard.splice(randomIndex, 1)[0];
+                selectedQuestions.push({
+                    ...question,
+                    question_number: (i + 1).toString(),
+                    prize_amount: prizeStructure[i].toString()
+                });
+            }
+        }
+
+        // Questions 13-15: Very Hard
+        for (let i = 12; i < 15; i++) {
+            if (veryHard.length > 0) {
+                const randomIndex = Math.floor(Math.random() * veryHard.length);
+                const question = veryHard.splice(randomIndex, 1)[0];
+                selectedQuestions.push({
+                    ...question,
+                    question_number: (i + 1).toString(),
+                    prize_amount: prizeStructure[i].toString()
+                });
+            }
+        }
+
+        // Fill remaining slots if needed
+        while (selectedQuestions.length < 15) {
+            const allRemaining = [...easy, ...medium, ...hard, ...veryHard];
+            if (allRemaining.length === 0) break;
+            
+            const randomIndex = Math.floor(Math.random() * allRemaining.length);
+            const question = allRemaining[randomIndex];
+            selectedQuestions.push({
+                ...question,
+                question_number: selectedQuestions.length + 1 + "",
+                prize_amount: prizeStructure[selectedQuestions.length].toString()
+            });
+        }
+
+        return {
+            content: {
+                game_settings: {
+                    total_questions: 15,
+                    language: "en",
+                    category: category,
+                    difficulty: "progressive",
+                    prize_currency: "USD"
+                },
+                questions: selectedQuestions
+            }
+        };
+    }
+
+    // Method to generate multiple question sets for better variety
+    async generateQuestionPool(category, count = 50) {
+        console.log(`Generating ${count} questions for category: ${category}`);
+        
+        const questionSets = [];
+        const setsToGenerate = Math.ceil(count / 15);
+        
+        for (let i = 0; i < setsToGenerate; i++) {
+            try {
+                const questionSet = await this.generateNewQuestions(category);
+                if (questionSet && questionSet.content && questionSet.content.questions) {
+                    questionSets.push(...questionSet.content.questions);
+                }
+                
+                // Add delay to avoid rate limiting
+                if (i < setsToGenerate - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            } catch (error) {
+                console.error(`Error generating question set ${i + 1}:`, error.message);
+            }
+        }
+        
+        return questionSets;
     }
 }
 

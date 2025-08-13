@@ -1,181 +1,132 @@
 <template>
-  <div class="container mx-auto px-6 py-16 relative">
-    <!-- Background Effects -->
-    <div class="absolute inset-0 overflow-hidden">
-      <div class="absolute top-1/3 right-1/3 w-80 h-80 border border-neon-green/20 rounded-full animate-pulse"></div>
-      <div class="absolute bottom-1/3 left-1/3 w-64 h-64 border border-neon-blue/20 rounded-full animate-pulse" style="animation-delay: 2s"></div>
-    </div>
-    
-    <div class="relative z-10 max-w-6xl mx-auto">
+	<div class="min-h-screen bg-neutral-950">
+		<div class="max-w-5xl mx-auto px-4 py-8">
       <!-- Header -->
-      <div class="text-center mb-16">
-        <div class="text-8xl mb-6 animate-float">👤</div>
-        <h1 class="text-6xl font-bold font-['Orbitron'] neon-text mb-4">
-          NEURAL PROFILE
-        </h1>
-        <p class="text-xl text-gray-300">
-          Quantum consciousness analytics and digital evolution metrics
-        </p>
+			<div class="text-center mb-8">
+				<div class="text-6xl mb-4">👤</div>
+				<h1 class="text-3xl font-bold text-white mb-2">Player Profile</h1>
+				<p class="text-neutral-400">Your journey to becoming a millionaire</p>
       </div>
 
-      <div v-if="!userStore.isLoggedIn" class="text-center">
-        <div class="bg-red-600 bg-opacity-20 border border-red-500 rounded-lg p-8">
-          <h1 class="text-2xl font-bold text-red-300 mb-4">❌ Access Denied</h1>
-          <p class="text-red-200 mb-6">You must be logged in to view your profile!</p>
-          <router-link 
-            to="/login" 
-            class="bg-gold-600 hover:bg-gold-700 text-black font-bold py-3 px-6 rounded-lg transition-colors"
-          >
-            Login / Register
-          </router-link>
-        </div>
+			<div v-if="!userStore.isLoggedIn" class="card text-center">
+				<div class="text-5xl mb-3">❌</div>
+				<h1 class="text-xl font-bold text-red-300 mb-3">Access Denied</h1>
+				<p class="text-red-200 mb-4">You must be logged in to view your profile!</p>
+				<router-link to="/login" class="btn-primary">Login / Register</router-link>
       </div>
 
       <div v-else>
-        <h1 class="text-4xl font-bold text-gold-400 mb-8 text-center">
-          👤 {{ userStore.currentUser?.username }}'s Profile
-        </h1>
+				<!-- Profile Header -->
+				<div class="card mb-6">
+					<div class="flex flex-col lg:flex-row items-center gap-6">
+						<div class="w-24 h-24 bg-indigo-600 rounded-full grid place-items-center text-white text-4xl font-bold">
+							{{ userStore.currentUser?.username.charAt(0).toUpperCase() }}
+						</div>
+						<div class="text-center lg:text-left">
+							<h2 class="text-3xl font-bold text-white mb-2">{{ userStore.currentUser?.username }}</h2>
+							<p class="text-neutral-300 text-sm mb-3">Member since {{ formatDate(userStore.currentUser?.createdAt) }}</p>
+							<div class="flex flex-wrap gap-2 justify-center lg:justify-start">
+								<span class="px-3 py-1 bg-purple-600/20 border border-purple-500/30 rounded text-purple-300 text-sm font-semibold">
+									🎮 Quiz Player
+								</span>
+								<span v-if="userStore.currentUser?.totalEarnings >= 1000000" class="px-3 py-1 bg-yellow-600/20 border border-yellow-500/30 rounded text-yellow-300 text-sm font-semibold">
+									👑 Millionaire
+								</span>
+								<span v-else-if="userStore.currentUser?.totalEarnings >= 100000" class="px-3 py-1 bg-blue-600/20 border border-blue-500/30 rounded text-blue-300 text-sm font-semibold">
+									⭐ Elite Player
+								</span>
+            </div>
+          </div>
+            </div>
+          </div>
+          
+				<!-- Stats Grid -->
+				<div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+					<div class="card-compact text-center">
+						<div class="text-4xl mb-2">💰</div>
+						<h3 class="font-bold text-neutral-300 text-sm mb-1">Total Earnings</h3>
+						<p class="text-2xl font-bold text-yellow-400">${{ userStore.currentUser?.totalEarnings.toLocaleString() || 0 }}</p>
+            </div>
 
-        <!-- Quantum Analytics Matrix -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div class="cyber-card p-8 border-gold-400/30 text-center group hover:border-gold-400/60 transition-all duration-500 relative overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-br from-gold-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            <div class="relative z-10">
-              <div class="text-5xl mb-4 animate-float">💎</div>
-              <h3 class="text-lg font-bold gold-text mb-3 font-['Orbitron']">QUANTUM WEALTH</h3>
-              <p class="text-3xl font-bold gold-text">${{ userStore.currentUser?.totalEarnings.toLocaleString() || 0 }}</p>
-            </div>
+					<div class="card-compact text-center">
+						<div class="text-4xl mb-2">🎮</div>
+						<h3 class="font-bold text-neutral-300 text-sm mb-1">Games Played</h3>
+						<p class="text-2xl font-bold text-blue-400">{{ userStore.currentUser?.gamesPlayed || 0 }}</p>
           </div>
           
-          <div class="cyber-card p-8 border-neon-purple/30 text-center group hover:border-neon-purple/60 transition-all duration-500 relative overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-br from-neon-purple/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            <div class="relative z-10">
-              <div class="text-5xl mb-4 animate-float" style="animation-delay: 0.5s">⚡</div>
-              <h3 class="text-lg font-bold text-purple-400 mb-3 font-['Orbitron']">NEURAL SESSIONS</h3>
-              <p class="text-3xl font-bold text-purple-400">{{ userStore.currentUser?.gamesPlayed || 0 }}</p>
+					<div class="card-compact text-center">
+						<div class="text-4xl mb-2">🏆</div>
+						<h3 class="font-bold text-neutral-300 text-sm mb-1">Best Score</h3>
+						<p class="text-2xl font-bold text-green-400">${{ userStore.currentUser?.highestScore?.toLocaleString() || 0 }}</p>
             </div>
-          </div>
-          
-          <div class="cyber-card p-8 border-neon-green/30 text-center group hover:border-neon-green/60 transition-all duration-500 relative overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-br from-neon-green/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            <div class="relative z-10">
-              <div class="text-5xl mb-4 animate-float" style="animation-delay: 1s">🏆</div>
-              <h3 class="text-lg font-bold text-green-400 mb-3 font-['Orbitron']">PEAK ACHIEVEMENT</h3>
-              <p class="text-3xl font-bold text-green-400">${{ userStore.currentUser?.highestScore?.toLocaleString() || 0 }}</p>
-            </div>
-          </div>
-          
-          <div class="cyber-card p-8 border-neon-blue/30 text-center group hover:border-neon-blue/60 transition-all duration-500 relative overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-br from-neon-blue/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            <div class="relative z-10">
-              <div class="text-5xl mb-4 animate-float" style="animation-delay: 1.5s">📈</div>
-              <h3 class="text-lg font-bold neon-text mb-3 font-['Orbitron']">SUCCESS RATE</h3>
-              <p class="text-3xl font-bold neon-text">{{ getWinRate() }}%</p>
-            </div>
+
+					<div class="card-compact text-center">
+						<div class="text-4xl mb-2">📈</div>
+						<h3 class="font-bold text-neutral-300 text-sm mb-1">Success Rate</h3>
+						<p class="text-2xl font-bold text-purple-400">{{ getWinRate() }}%</p>
           </div>
         </div>
 
-        <!-- Statistics -->
-        <div class="space-y-12">
-          <!-- Neural Identity Matrix -->
-          <div class="cyber-card p-8 border-neon-blue/30 relative overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-br from-neon-blue/5 to-transparent"></div>
-            <div class="relative z-10">
-              <div class="flex flex-col lg:flex-row items-center lg:items-start space-y-8 lg:space-y-0 lg:space-x-12">
-                <div class="flex-shrink-0">
-                  <div class="cyber-card p-8 border-gold-400/50 relative overflow-hidden group">
-                    <div class="absolute inset-0 bg-gradient-to-br from-gold-400/20 to-transparent"></div>
-                    <div class="relative z-10 w-32 h-32 flex items-center justify-center">
-                      <span class="text-8xl animate-float">👤</span>
+				<!-- Progress Section -->
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+					<!-- Millionaire Progress -->
+					<div class="card">
+						<h3 class="text-lg font-bold text-white mb-4 text-center">Millionaire Progress</h3>
+						<div class="space-y-3">
+							<div class="flex justify-between text-sm">
+								<span class="text-neutral-300">Current: ${{ userStore.currentUser?.totalEarnings.toLocaleString() || 0 }}</span>
+								<span class="text-neutral-300">Target: $1,000,000</span>
                     </div>
+							<div class="w-full bg-neutral-800 rounded-full h-3 overflow-hidden border border-neutral-700">
+								<div
+									class="bg-indigo-600 h-3 transition-all duration-1000"
+									:style="{ width: Math.min((userStore.currentUser?.totalEarnings || 0) / 1000000 * 100, 100) + '%' }"
+								></div>
                   </div>
-                </div>
-                <div class="flex-grow text-center lg:text-left">
-                  <h2 class="text-4xl font-bold neon-text mb-4 font-['Orbitron']">{{ userStore.currentUser?.username.toUpperCase() }}</h2>
-                  <div class="cyber-card p-3 border-gold-400/30 inline-block mb-6">
-                    <span class="text-gold-400 font-['Orbitron']">QUANTUM CONSCIOUSNESS</span>
-                  </div>
-                  <div class="flex flex-wrap justify-center lg:justify-start gap-4">
-                    <div class="cyber-card p-3 border-neon-purple/30">
-                      <span class="text-purple-400 text-sm font-['Orbitron']">🏆 MATRIX RANK: {{ getUserRank() }}</span>
-                    </div>
-                    <div class="cyber-card p-3 border-neon-green/30">
-                      <span class="text-green-400 text-sm font-['Orbitron']">✅ INITIALIZED: {{ formatDate(userStore.currentUser?.createdAt) }}</span>
-                    </div>
-                  </div>
-                </div>
+							<div class="text-center text-sm text-neutral-400">
+								{{ Math.round((userStore.currentUser?.totalEarnings || 0) / 1000000 * 100) }}% Complete
               </div>
             </div>
           </div>
 
-          <!-- Digital Immortality Progress -->
-          <div class="cyber-card p-8 border-gold-400/30 relative overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-br from-gold-400/5 to-transparent"></div>
-            <div class="relative z-10">
-              <h3 class="text-3xl font-bold gold-text mb-8 text-center font-['Orbitron']">DIGITAL IMMORTALITY PROGRESS</h3>
-              <div class="mb-8">
-                <div class="flex justify-between text-gray-300 mb-4 font-['Orbitron']">
-                  <span>CURRENT: ${{ userStore.currentUser?.totalEarnings.toLocaleString() || 0 }}</span>
-                  <span>TRANSCENDENCE: $1,000,000</span>
+					<!-- Recent Achievements -->
+					<div class="card">
+						<h3 class="text-lg font-bold text-white mb-4 text-center">Recent Achievements</h3>
+						<div class="space-y-2">
+							<div v-if="userStore.currentUser?.totalEarnings >= 1000000" class="flex items-center gap-3 p-3 bg-yellow-600/20 border border-yellow-500/30 rounded">
+								<div class="text-xl">👑</div>
+								<div>
+									<div class="font-bold text-yellow-300 text-sm">Millionaire!</div>
+									<div class="text-xs text-yellow-200">Reached $1,000,000 in earnings</div>
+								</div>
                 </div>
-                <div class="cyber-card p-2 border-gray-500/30">
-                  <div class="w-full bg-gray-800 rounded-full h-6 relative overflow-hidden">
-                    <div 
-                      class="bg-gradient-to-r from-gold-400 to-gold-600 h-6 rounded-full transition-all duration-1000 relative"
-                      :style="{ width: getProgressPercentage() + '%' }"
-                    >
-                      <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+							<div v-if="userStore.currentUser?.gamesPlayed >= 10" class="flex items-center gap-3 p-3 bg-blue-600/20 border border-blue-500/30 rounded">
+								<div class="text-xl">🎯</div>
+								<div>
+									<div class="font-bold text-blue-300 text-sm">Veteran Player</div>
+									<div class="text-xs text-blue-200">Played 10+ games</div>
                     </div>
                   </div>
-                </div>
-                <div class="text-center mt-4">
-                  <span class="text-2xl font-bold gold-text font-['Orbitron']">{{ getProgressPercentage() }}% EVOLVED</span>
+							<div v-if="userStore.currentUser?.highestScore >= 100000" class="flex items-center gap-3 p-3 bg-green-600/20 border border-green-500/30 rounded">
+								<div class="text-xl">⭐</div>
+								<div>
+									<div class="font-bold text-green-300 text-sm">High Roller</div>
+									<div class="text-xs text-green-200">Scored $100,000+ in a single game</div>
                 </div>
               </div>
-              
-              <div class="text-center">
-                <div class="cyber-card p-6 border-gold-400/30 mb-6">
-                  <p class="text-gray-300 mb-2 font-['Orbitron']">
-                    QUANTUM WEALTH REQUIRED FOR TRANSCENDENCE:
-                  </p>
-                  <p class="text-2xl font-bold gold-text">
-                    ${{ (1000000 - (userStore.currentUser?.totalEarnings || 0)).toLocaleString() }}
-                  </p>
-                </div>
-                <router-link 
-                  to="/setup" 
-                  class="gold-button text-xl py-4 px-8 transform hover:scale-110 transition-all duration-300"
-                >
-                  <span class="flex items-center space-x-3">
-                    <span class="text-2xl">🚀</span>
-                    <span class="font-['Orbitron']">CONTINUE EVOLUTION</span>
-                  </span>
-                </router-link>
+							<div v-if="!userStore.currentUser?.totalEarnings || userStore.currentUser?.totalEarnings < 100000" class="text-center text-neutral-400 py-3 text-sm">
+								Keep playing to unlock achievements!
               </div>
             </div>
           </div>
         </div>
 
         <!-- Action Buttons -->
-        <div class="text-center space-x-4">
-          <router-link 
-            to="/setup" 
-            class="inline-block bg-gold-600 hover:bg-gold-700 text-black font-bold py-3 px-6 rounded-lg transition-colors"
-          >
-            🎯 Play New Quiz
-          </router-link>
-          <router-link 
-            to="/leaderboard" 
-            class="inline-block bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-          >
-            🏆 View Leaderboard
-          </router-link>
-          <button 
-            @click="userStore.logout()" 
-            class="inline-block bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-          >
-            🚪 Logout
-          </button>
+				<div class="text-center">
+					<div class="flex flex-col sm:flex-row gap-4 justify-center">
+						<router-link to="/setup" class="btn-primary">🎮 Play Again</router-link>
+						<router-link to="/leaderboard" class="btn-secondary">🏆 View Leaderboard</router-link>
+					</div>
         </div>
       </div>
     </div>
@@ -183,8 +134,24 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
+
+const router = useRouter()
 const userStore = useUserStore()
+
+onMounted(() => {
+  if (!userStore.isLoggedIn) {
+    router.push('/')
+  }
+})
+
+const getWinRate = () => {
+  if (!userStore.currentUser?.gamesPlayed || userStore.currentUser.gamesPlayed === 0) return 0
+  // Simple calculation - you can make this more sophisticated
+  return Math.round((userStore.currentUser.totalEarnings / (userStore.currentUser.gamesPlayed * 1000)) * 100)
+}
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return 'Unknown'
@@ -194,32 +161,6 @@ const formatDate = (dateString?: string) => {
     day: 'numeric'
   })
 }
-
-const getWinRate = () => {
-  const user = userStore.currentUser
-  if (!user || user.gamesPlayed === 0) return 0
-  // Simplified calculation based on earnings vs games played
-  const rate = Math.min(100, Math.round((user.totalEarnings / (user.gamesPlayed * 50000)) * 100))
-  return rate
-}
-
-const getUserRank = () => {
-  // Simplified ranking based on total earnings
-  const earnings = userStore.currentUser?.totalEarnings || 0
-  if (earnings >= 1000000) return 'DIGITAL IMMORTAL'
-  if (earnings >= 500000) return 'QUANTUM MASTER'
-  if (earnings >= 100000) return 'NEURAL ELITE'
-  if (earnings >= 50000) return 'CYBER ADEPT'
-  if (earnings >= 10000) return 'DATA NOVICE'
-  return 'NEURAL INITIATE'
-}
-
-const getProgressPercentage = () => {
-  const earnings = userStore.currentUser?.totalEarnings || 0
-  return Math.min(100, Math.round((earnings / 1000000) * 100))
-}
-
-// Removed unused helper functions
 </script>
 
 <style scoped>

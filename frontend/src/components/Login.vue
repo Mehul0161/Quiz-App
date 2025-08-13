@@ -1,76 +1,81 @@
 <template>
-  <div class="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
     <div class="w-full max-w-md">
       <!-- Header -->
       <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold text-white mb-2">
-          {{ isRegistering ? 'Create Your Account' : 'Welcome Back' }}
+        <h1 class="text-4xl font-bold text-white mb-3 bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 bg-clip-text text-transparent">
+          {{ isRegistering ? 'Create Account' : 'Welcome Back' }}
         </h1>
-        <p class="text-gray-400">
-          {{ isRegistering ? 'Join the challenge and win big!' : 'Sign in to continue your journey.' }}
+        <p class="text-gray-300 text-base">
+          {{ isRegistering ? 'Join the challenge and win big!' : 'Sign in to continue your journey' }}
         </p>
       </div>
 
       <!-- Form Card -->
-      <div class="bg-black/20 rounded-lg shadow-lg border border-gray-700 p-8">
+      <div class="bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 p-8 shadow-2xl">
         <form @submit.prevent="handleSubmit" class="space-y-6">
           <div v-if="isRegistering">
-            <label class="block text-sm font-semibold text-gray-300 mb-2">Username</label>
-            <input
-              v-model="username"
-              type="text"
-              required
-              class="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white"
-              placeholder="Choose a unique username"
+            <label class="block text-sm font-semibold text-gray-200 mb-2">Username</label>
+            <input 
+              v-model="username" 
+              type="text" 
+              required 
+              class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200" 
+              placeholder="Choose a unique username" 
             />
           </div>
           
           <div>
-            <label class="block text-sm font-semibold text-gray-300 mb-2">Email</label>
-            <input
-              v-model="email"
-              type="email"
-              required
-              class="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white"
-              placeholder="Enter your email"
+            <label class="block text-sm font-semibold text-gray-200 mb-2">Email</label>
+            <input 
+              v-model="email" 
+              type="email" 
+              required 
+              class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200" 
+              placeholder="Enter your email" 
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-200 mb-2">Password</label>
+            <input 
+              v-model="password" 
+              type="password" 
+              required 
+              class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200" 
+              placeholder="Enter your password" 
             />
           </div>
           
-          <button
-            type="submit"
-            :disabled="userStore.loading"
-            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50"
+          <button 
+            type="submit" 
+            :disabled="userStore.loading" 
+            class="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:from-purple-700 hover:via-pink-700 hover:to-indigo-700 text-white font-bold py-3 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] shadow-lg hover:shadow-xl"
           >
-            <span v-if="userStore.loading">Processing...</span>
+            <LoadingSpinner v-if="userStore.loading" text="Processing..." />
             <span v-else>{{ isRegistering ? 'Create Account' : 'Sign In' }}</span>
           </button>
         </form>
-
+        
         <!-- Toggle Mode -->
-        <div class="mt-6 text-center text-sm">
-          <span class="text-gray-400">
-            {{ isRegistering ? 'Already have an account?' : 'New here?' }}
-          </span>
+        <div class="mt-6 text-center">
           <button 
             @click="toggleMode" 
-            class="ml-1 text-indigo-400 hover:text-indigo-300 font-semibold"
+            class="text-sm text-purple-300 hover:text-purple-200 font-medium transition-colors"
           >
-            {{ isRegistering ? 'Sign in' : 'Create an account' }}
+            {{ isRegistering ? 'Already have an account? Sign in' : 'Need an account? Register' }}
           </button>
         </div>
-
+        
         <!-- Error Display -->
-        <div v-if="userStore.error" class="mt-6 p-4 bg-red-900/50 border border-red-500/30 rounded-lg">
-          <p class="text-red-300 text-center">{{ userStore.error }}</p>
+        <div v-if="userStore.error" class="mt-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-center text-red-300 text-sm animate-pulse">
+          {{ userStore.error }}
         </div>
       </div>
       
       <!-- Back to Home -->
-      <div class="mt-8 text-center">
-        <router-link 
-          to="/" 
-          class="text-gray-500 hover:text-gray-300 text-sm transition-colors font-semibold"
-        >
+      <div class="text-center mt-6">
+        <router-link to="/" class="text-sm text-gray-400 hover:text-white transition-colors">
           ← Back to Home
         </router-link>
       </div>
@@ -82,13 +87,15 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
+import LoadingSpinner from './LoadingSpinner.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 
-const isRegistering = ref(true)
 const username = ref('')
 const email = ref('')
+const password = ref('')
+const isRegistering = ref(false)
 
 const toggleMode = () => {
   isRegistering.value = !isRegistering.value
@@ -98,14 +105,16 @@ const toggleMode = () => {
 const handleSubmit = async () => {
   try {
     if (isRegistering.value) {
-      await userStore.register(username.value, email.value)
+      await userStore.register(username.value, email.value, password.value)
     } else {
-      await userStore.login(email.value)
+      await userStore.login(email.value, password.value)
     }
     
+    // Redirect to dashboard on success
     router.push('/dashboard')
   } catch (error) {
-    console.error('Authentication error:', error)
+    // Error is already set in the store
+    console.error('Authentication failed:', error)
   }
 }
 </script>

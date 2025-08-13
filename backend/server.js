@@ -3,6 +3,8 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const GeminiService = require('./geminiService');
 const mongoService = require('./mongoService');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 dotenv.config();
 
@@ -15,6 +17,51 @@ const geminiService = new GeminiService();
 // Middleware
 app.use(cors()); // Enables CORS for all origins
 app.use(express.json());
+
+// JWT Secret (in production, use environment variable)
+const JWT_SECRET = process.env.JWT_SECRET || 'quiz-app-jwt-secret-key-2024-change-in-production';
+
+// Middleware to verify JWT token
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Access token required' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) {
+            return res.status(403).json({ error: 'Invalid or expired token' });
+        }
+        req.user = user;
+        next();
+    });
+};
+
+// Helper function to hash password
+const hashPassword = async (password) => {
+    const saltRounds = 10;
+    return await bcrypt.hash(password, saltRounds);
+};
+
+// Helper function to compare password
+const comparePassword = async (password, hashedPassword) => {
+    return await bcrypt.compare(password, hashedPassword);
+};
+
+// Helper function to generate JWT token
+const generateToken = (user) => {
+    return jwt.sign(
+        { 
+            userId: user._id, 
+            username: user.username,
+            email: user.email 
+        }, 
+        JWT_SECRET, 
+        { expiresIn: '7d' }
+    );
+};
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -159,11 +206,11 @@ app.post('/api/users/register', async (req, res) => {
     try {
         console.log('Registration request received:', { body: req.body });
         
-        const { username, email } = req.body;
+        const { username, email, password } = req.body;
         
-        if (!username || !email) {
-            console.log('Missing username or email');
-            return res.status(400).json({ error: 'Username and email are required' });
+        if (!username || !email || !password) {
+            console.log('Missing username, email, or password');
+            return res.status(400).json({ error: 'Username, email, and password are required' });
         }
         
         console.log('Attempting to connect to MongoDB...');
@@ -200,9 +247,9 @@ app.post('/api/users/register', async (req, res) => {
         
         console.log('Creating new user...');
         const newUser = {
-            id: Date.now().toString(),
             username,
             email,
+            password: await hashPassword(password), // Hash password
             totalEarnings: 0,
             gamesPlayed: 0,
             highestScore: 0,
@@ -231,10 +278,10 @@ app.post('/api/users/register', async (req, res) => {
 
 app.post('/api/users/login', async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email, password } = req.body;
         
-        if (!email) {
-            return res.status(400).json({ error: 'Email is required' });
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required' });
         }
         
         // Connect to MongoDB
@@ -254,14 +301,21 @@ app.post('/api/users/login', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         
-        res.json({ user });
+        // Compare passwords
+        if (!(await comparePassword(password, user.password))) {
+            return res.status(401).json({ error: 'Invalid password' });
+        }
+
+        const token = generateToken(user);
+        res.json({ user, token });
     } catch (error) {
         console.error('Error logging in user:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-app.get('/api/users/:id', async (req, res) => {
+// Get user by ID (protected route)
+app.get('/api/users/:id', authenticateToken, async (req, res) => {
     try {
         // Connect to MongoDB
         try {
@@ -275,14 +329,56 @@ app.get('/api/users/:id', async (req, res) => {
         }
         const usersCollection = mongoService.getCollection('users');
         
-        const user = await usersCollection.findOne({ id: req.params.id });
+        const userId = req.params.id;
+        const user = await usersCollection.findOne({ _id: userId });
+        
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
         
-        res.json({ user });
+        // Remove password from response
+        const { password, ...userWithoutPassword } = user;
+        res.json({ user: userWithoutPassword });
     } catch (error) {
         console.error('Error fetching user:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Verify token endpoint
+app.post('/api/auth/verify', authenticateToken, (req, res) => {
+    res.json({ 
+        valid: true, 
+        user: req.user 
+    });
+});
+
+// Get current user profile (protected route)
+app.get('/api/users/profile/me', authenticateToken, async (req, res) => {
+    try {
+        // Connect to MongoDB
+        try {
+            await mongoService.connect();
+        } catch (connectionError) {
+            console.error('MongoDB connection failed:', connectionError.message);
+            return res.status(500).json({ 
+                error: 'Database connection failed',
+                details: connectionError.message 
+            });
+        }
+        const usersCollection = mongoService.getCollection('users');
+        
+        const user = await usersCollection.findOne({ _id: req.user.userId });
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Remove password from response
+        const { password, ...userWithoutPassword } = user;
+        res.json({ user: userWithoutPassword });
+    } catch (error) {
+        console.error('Error fetching user profile:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -311,11 +407,17 @@ app.get('/api/leaderboard', async (req, res) => {
         }
         const usersCollection = mongoService.getCollection('users');
         
-        // Sort users by total earnings
+        // Get limit from query parameter, default to 50
+        const limit = parseInt(req.query.limit) || 50;
+        
+        // Get total count of players
+        const totalPlayers = await usersCollection.countDocuments({});
+        
+        // Sort users by total earnings and limit results
         const sortedUsers = await usersCollection
             .find({})
             .sort({ totalEarnings: -1 })
-            .limit(50)
+            .limit(limit)
             .map((user, index) => ({
                 rank: index + 1,
                 username: user.username,
@@ -325,7 +427,10 @@ app.get('/api/leaderboard', async (req, res) => {
             }))
             .toArray();
         
-        res.json({ leaderboard: sortedUsers });
+        res.json({ 
+            leaderboard: sortedUsers,
+            totalPlayers: totalPlayers
+        });
     } catch (error) {
         console.error('Error fetching leaderboard:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -394,110 +499,282 @@ app.get('/api/test-mongo', async (req, res) => {
 });
 
 // Quiz generation routes
-app.post('/api/quiz/generate', async (req, res) => {
-    try {
-        const { category } = req.body;
-        
-        if (!category) {
-            return res.status(400).json({ error: 'Category is required' });
-        }
-        
-        console.log(`Generating quiz for category: ${category}`);
+app.post('/api/quizzes/start', async (req, res) => {
+	try {
+		const { category, mode } = req.body
+		
+		if (!category || !mode) {
+			return res.status(400).json({ error: 'Category and mode are required' })
+		}
+
+		console.log(`Starting quiz for category: ${category}, mode: ${mode}`)
+
+		// Generate questions based on mode
+		let questions = []
+		
+		switch (mode) {
+			case 'normal':
+				questions = await generateNormalQuestions(category)
+				break
+			case 'rapidfire':
+				questions = await generateRapidFireQuestions(category)
+				break
+			case 'nooptions':
+				questions = await generateNoOptionsQuestions(category)
+				break
+			case 'imagebased':
+				questions = generateImageBasedQuestions(category) // Keep as dummy for now
+				break
+			default:
+				return res.status(400).json({ error: 'Invalid game mode' })
+		}
+
+		res.json({ 
+			questions,
+			mode,
+			category,
+			totalQuestions: questions.length
+		})
+	} catch (error) {
+		console.error('Error starting quiz:', error)
+		res.status(500).json({ error: 'Failed to start quiz' })
+	}
+})
+
+// Generate normal mode questions using AI
+async function generateNormalQuestions(category) {
+	try {
+		console.log(`Generating AI questions for Normal Mode - Category: ${category}`)
         
         // Check if Gemini API key is available
         if (!process.env.GEMINI_API_KEY) {
-            console.error('GEMINI_API_KEY not found in environment variables');
-            return res.status(500).json({ 
-                error: 'AI service not configured',
-                details: 'GEMINI_API_KEY environment variable is missing'
-            });
-        }
-        
-        const aiResponse = await geminiService.generateQuestions(category);
-        console.log('AI Response received:', JSON.stringify(aiResponse, null, 2));
-        
-        // Handle the new AI response format
+			console.error('GEMINI_API_KEY not found, using fallback questions')
+			return generateFallbackQuestions(category)
+		}
+
+		const aiResponse = await geminiService.generateQuestions(category)
+		console.log('AI Response received for Normal Mode')
+		
         if (aiResponse && aiResponse.content && aiResponse.content.questions) {
-            const questions = aiResponse.content.questions;
-            console.log(`Processing ${questions.length} questions from AI response`);
+			const questions = aiResponse.content.questions
+			console.log(`Processing ${questions.length} AI questions for Normal Mode`)
             
-            // Transform the AI response to match our expected format
+			// Transform AI response to match frontend format
             const transformedQuestions = questions.map((q, index) => ({
-                id: `${Date.now()}_${index}`,
+				id: `normal_${Date.now()}_${index}`,
                 question: q.question,
                 options: q.options,
-                correctAnswer: q.correctAnswer || q.correct_answer,
-                difficulty: q.difficulty || q.difficulty_level,
+                correctAnswer: q.correct_answer,
+                difficulty: q.difficulty_level,
                 explanation: q.explanation,
                 category: category,
                 questionNumber: index + 1,
                 prizeValue: PRIZE_STRUCTURE[index],
-                // Include lifelines data
                 lifelines: {
-                    '50-50': q.lifelines['50-50'] || q.lifelines.fifty_fifty,
-                    audience: q.lifelines.audience || q.lifelines.audience_poll,
-                    friend: q.lifelines.friend || q.lifelines.phone_a_friend
+                    '50-50': q.lifelines.fifty_fifty,
+                    audience: q.lifelines.audience_poll,
+                    friend: q.lifelines.phone_a_friend
                 }
-            }));
-            
-            console.log('Successfully transformed questions');
-            
-            res.json({ 
-                questions: transformedQuestions,
-                category,
-                totalQuestions: 15,
-                prizeStructure: PRIZE_STRUCTURE
-            });
+			}))
+			
+			console.log('Successfully transformed AI questions for Normal Mode')
+			return transformedQuestions
+		} else {
+			throw new Error('Invalid AI response format')
+		}
+	} catch (error) {
+		console.error('Error generating Normal Mode questions:', error)
+		console.log('Falling back to static questions for Normal Mode')
+		return generateFallbackQuestions(category)
+	}
+}
+
+// Generate rapid fire questions using AI
+async function generateRapidFireQuestions(category) {
+	try {
+		console.log(`Generating AI questions for Rapid Fire Mode - Category: ${category}`)
+		
+		// Check if Gemini API key is available
+		if (!process.env.GEMINI_API_KEY) {
+			console.error('GEMINI_API_KEY not found, using fallback questions')
+			return generateFallbackQuestions(category)
+		}
+
+		const aiResponse = await geminiService.generateQuestions(category)
+		console.log('AI Response received for Rapid Fire Mode')
+		
+		if (aiResponse && aiResponse.content && aiResponse.content.questions) {
+			const questions = aiResponse.content.questions
+			console.log(`Processing ${questions.length} AI questions for Rapid Fire Mode`)
+			
+			// Transform AI response to match frontend format (simplified for rapid fire)
+			const transformedQuestions = questions.map((q, index) => ({
+				id: `rapidfire_${Date.now()}_${index}`,
+				question: q.question,
+				options: q.options,
+				correctAnswer: q.correct_answer,
+				difficulty: 'medium', // Rapid fire is generally medium difficulty
+				explanation: q.explanation,
+				category: category,
+				questionNumber: index + 1,
+				prizeValue: PRIZE_STRUCTURE[index]
+				// No lifelines for rapid fire mode
+			}))
+			
+			console.log('Successfully transformed AI questions for Rapid Fire Mode')
+			return transformedQuestions
+		} else {
+			throw new Error('Invalid AI response format')
+		}
+	} catch (error) {
+		console.error('Error generating Rapid Fire questions:', error)
+		console.log('Falling back to static questions for Rapid Fire Mode')
+		return generateFallbackQuestions(category)
+	}
+}
+
+// Generate no-options questions using AI
+async function generateNoOptionsQuestions(category) {
+	try {
+		console.log(`Generating AI questions for No Options Mode - Category: ${category}`)
+		
+		// Check if Gemini API key is available
+		if (!process.env.GEMINI_API_KEY) {
+			console.error('GEMINI_API_KEY not found, using fallback questions')
+			return generateFallbackQuestionsNoOptions(category)
+		}
+
+		// Create a special prompt for no-options questions
+		const prompt = `
+			Generate 15 "Who Wants to Be a Millionaire" style questions for the category: "${category}".
+			These questions are for a "No Options" mode where users must type their answers.
+			
+			The response MUST be a single valid JSON object with this structure:
+			{
+			  "content": {
+				"questions": [
+				  {
+					"question": "Question text that can be answered with a short text response",
+					"correct_answer": "The exact correct answer",
+					"difficulty_level": "easy|medium|hard|very hard",
+					"explanation": "Brief explanation of the answer"
+				  }
+				]
+			  }
+			}
+
+			Requirements:
+			1. Questions should have clear, unambiguous answers
+			2. Answers should be short (1-3 words typically)
+			3. Progressive difficulty: questions 1-4 easy, 5-8 medium, 9-12 hard, 13-15 very hard
+			4. Focus on factual knowledge that has definitive answers
+			5. Avoid questions that could have multiple correct interpretations
+		`
+
+		const result = await geminiService.model.generateContent(prompt)
+		const response = await result.response
+		let text = response.text().trim()
+
+		// Clean the response
+		if (text.startsWith('```json')) {
+			text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+		} else if (text.startsWith('```')) {
+			text = text.replace(/^```\s*/, '').replace(/\s*```$/, '')
+		}
+
+		const parsedJson = JSON.parse(text)
+		
+		if (parsedJson && parsedJson.content && parsedJson.content.questions) {
+			const questions = parsedJson.content.questions
+			console.log(`Processing ${questions.length} AI questions for No Options Mode`)
+			
+			// Transform AI response to match frontend format
+			const transformedQuestions = questions.map((q, index) => ({
+				id: `nooptions_${Date.now()}_${index}`,
+				question: q.question,
+				options: null, // No options for this mode
+				correctAnswer: q.correct_answer,
+				difficulty: q.difficulty_level,
+				explanation: q.explanation,
+				category: category,
+				questionNumber: index + 1,
+				prizeValue: PRIZE_STRUCTURE[index]
+			}))
+			
+			console.log('Successfully transformed AI questions for No Options Mode')
+			return transformedQuestions
         } else {
-            console.error('Invalid AI response format:', aiResponse);
-            throw new Error('Invalid AI response format');
+			throw new Error('Invalid AI response format')
         }
     } catch (error) {
-        console.error('Error generating quiz:', error);
-        console.error('Error stack:', error.stack);
-        
-        // Fallback: Generate a basic quiz for testing
-        console.log('Falling back to basic quiz generation...');
-        try {
-            const fallbackQuestions = generateFallbackQuestions(category);
-            // Transform fallback to frontend's expected schema
-            const transformedFallback = fallbackQuestions.map((q, index) => ({
-                id: `${Date.now()}_${index}`,
-                question: q.question,
-                options: q.options,
-                correctAnswer: q.correctAnswer,
-                difficulty: q.difficulty,
-                explanation: q.explanation,
-                category: category,
-                questionNumber: index + 1,
-                prizeValue: PRIZE_STRUCTURE[index],
-                lifelines: {
-                    '50-50': q.lifelines['50-50'],
-                    audience: q.lifelines.audience,
-                    friend: q.lifelines.friend
-                }
-            }));
-            res.json({ 
-                questions: transformedFallback,
-                category,
-                totalQuestions: 15,
-                prizeStructure: PRIZE_STRUCTURE
-            });
-        } catch (fallbackError) {
-            console.error('Fallback quiz generation also failed:', fallbackError);
-            res.status(500).json({ 
-                error: 'Failed to generate quiz',
-                details: 'Both AI service and fallback failed: ' + error.message
-            });
-        }
-    }
-});
+		console.error('Error generating No Options questions:', error)
+		console.log('Falling back to static questions for No Options Mode')
+		return generateFallbackQuestionsNoOptions(category)
+	}
+}
+
+// Fallback for no-options mode
+function generateFallbackQuestionsNoOptions(category) {
+	const questions = []
+	
+	const sampleQuestions = [
+		{ question: "What is the capital of France?", answer: "Paris", difficulty: "easy" },
+		{ question: "What is 2 + 2?", answer: "4", difficulty: "easy" },
+		{ question: "What planet is known as the Red Planet?", answer: "Mars", difficulty: "easy" },
+		{ question: "Who wrote Romeo and Juliet?", answer: "Shakespeare", difficulty: "medium" },
+		{ question: "What is the chemical symbol for gold?", answer: "Au", difficulty: "hard" }
+	]
+	
+	for (let i = 0; i < 15; i++) {
+		const sample = sampleQuestions[i % sampleQuestions.length]
+		const difficulty = i < 4 ? 'easy' : i < 8 ? 'medium' : i < 12 ? 'hard' : 'very hard'
+		
+		questions.push({
+			id: `fallback_no_${i + 1}`,
+			question: `${sample.question} (${category} - Question ${i + 1})`,
+			options: null,
+			correctAnswer: sample.answer,
+			category,
+			difficulty,
+			explanation: `This is a ${difficulty} question about ${category}`,
+			questionNumber: i + 1,
+			prizeValue: PRIZE_STRUCTURE[i]
+		})
+	}
+	
+	return questions
+}
+
+// Generate image-based questions
+function generateImageBasedQuestions(category) {
+	const questions = []
+	
+	for (let i = 0; i < 15; i++) {
+		questions.push({
+			id: `img${i + 1}`,
+			question: `Look at the image and answer question ${i + 1} in ${category}?`,
+			options: {
+				A: `Image option A`,
+				B: `Image option B`,
+				C: `Image option C`,
+				D: `Image option D`
+			},
+			correctAnswer: 'A',
+			category,
+			difficulty: 'medium',
+			explanation: `Image-based question about ${category}`,
+			imageUrl: `https://via.placeholder.com/400x300/4F46E5/FFFFFF?text=Question+${i + 1}`,
+			questionNumber: i + 1,
+			prizeValue: [100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000, 250000, 500000, 1000000][i]
+		})
+	}
+	
+	return questions
+}
 
 // Game completion route
-app.post('/api/games/complete', async (req, res) => {
+app.post('/api/games/complete', authenticateToken, async (req, res) => {
     try {
-        const { userId, category, questionsAnswered, earnings, isWinner } = req.body;
-        
         // Connect to MongoDB
         try {
             await mongoService.connect();
@@ -509,69 +786,88 @@ app.post('/api/games/complete', async (req, res) => {
             });
         }
         const usersCollection = mongoService.getCollection('users');
-        const quizzesCollection = mongoService.getCollection('quizzes');
         
-        const user = await usersCollection.findOne({ id: userId });
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+        const { finalScore, questionsAnswered } = req.body;
+        const userId = req.user.userId;
+        
+        if (typeof finalScore !== 'number' || typeof questionsAnswered !== 'number') {
+            return res.status(400).json({ error: 'Invalid score data' });
         }
         
         // Update user stats
-        const updateResult = await usersCollection.updateOne(
-            { id: userId },
+        const result = await usersCollection.updateOne(
+            { _id: userId },
             { 
                 $inc: { 
-                    totalEarnings: earnings,
+                    totalEarnings: finalScore,
                     gamesPlayed: 1
                 },
-                $max: { highestScore: earnings }
+                $max: { highestScore: finalScore }
             }
         );
         
-        // Add achievements
-        if (isWinner && !user.achievements.includes('Millionaire')) {
-            await usersCollection.updateOne(
-                { id: userId },
-                { $push: { achievements: 'Millionaire' } }
-            );
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ error: 'User not found' });
         }
-        if (user.gamesPlayed === 0 && !user.achievements.includes('First Game')) {
-            await usersCollection.updateOne(
-                { id: userId },
-                { $push: { achievements: 'First Game' } }
-            );
-        }
-        if (user.gamesPlayed === 9 && !user.achievements.includes('Veteran Player')) {
-            await usersCollection.updateOne(
-                { id: userId },
-                { $push: { achievements: 'Veteran Player' } }
-            );
-        }
-        
-        // Save game record
-        const gameRecord = {
-            id: Date.now().toString(),
-            userId,
-            category,
-            questionsAnswered,
-            earnings,
-            isWinner,
-            completedAt: new Date().toISOString()
-        };
-        
-        await quizzesCollection.insertOne(gameRecord);
-        
-        // Get updated user
-        const updatedUser = await usersCollection.findOne({ id: userId });
         
         res.json({ 
-            user: updatedUser, 
-            gameRecord,
-            newAchievements: updatedUser.achievements.slice(-1) // Return last achievement if any
+            success: true, 
+            message: 'Game completed successfully',
+            finalScore,
+            questionsAnswered
         });
     } catch (error) {
         console.error('Error completing game:', error);
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Pre-generate question pool for better variety
+app.post('/api/questions/generate-pool', async (req, res) => {
+    try {
+        const { category, count = 50 } = req.body;
+        
+        if (!category) {
+            return res.status(400).json({ error: 'Category is required' });
+        }
+        
+        console.log(`Starting question pool generation for category: ${category}`);
+        const questions = await geminiService.generateQuestionPool(category, count);
+        
+        res.json({ 
+            success: true, 
+            message: `Generated ${questions.length} questions for ${category}`,
+            category,
+            questionsGenerated: questions.length
+        });
+    } catch (error) {
+        console.error('Error generating question pool:', error);
+        res.status(500).json({ error: 'Failed to generate question pool' });
+    }
+});
+
+// Get question statistics
+app.get('/api/questions/stats', async (req, res) => {
+    try {
+        if (!mongoService.isConnected) {
+            return res.status(503).json({ error: 'Database not available' });
+        }
+        
+        const questionsCollection = mongoService.getCollection('questions');
+        const stats = await questionsCollection.aggregate([
+            {
+                $group: {
+                    _id: '$category',
+                    count: { $sum: 1 },
+                    difficulties: { $addToSet: '$difficulty_level' }
+                }
+            }
+        ]).toArray();
+        
+        res.json({ success: true, stats });
+    } catch (error) {
+        console.error('Error fetching question stats:', error);
+        res.status(500).json({ error: 'Failed to fetch question statistics' });
     }
 });
 
@@ -602,10 +898,10 @@ async function startServer() {
         await mongoService.connect();
         console.log('MongoDB connected successfully');
         
-        app.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
-            console.log(`Health check: http://localhost:${PORT}/api/health`);
-        });
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+        console.log(`Health check: http://localhost:${PORT}/api/health`);
+    });
     } catch (error) {
         console.error('Failed to start server:', error);
         console.error('Server startup failed due to MongoDB connection error');
@@ -614,7 +910,7 @@ async function startServer() {
 }
 
 if (!process.env.VERCEL) {
-  startServer().catch(console.error);
+startServer().catch(console.error);
 }
 
 // Error handling middleware
