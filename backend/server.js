@@ -42,6 +42,12 @@ app.use((req, res, next) => {
 });
 app.use(express.json());
 
+// Request logging middleware
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    next();
+});
+
 // Quiz categories
 const QUIZ_CATEGORIES = [
     'General Knowledge',
@@ -63,37 +69,37 @@ function generateFallbackQuestions(category) {
             {
                 question: "What is the capital of France?",
                 options: { A: "Berlin", B: "Madrid", C: "Paris", D: "Rome" },
-                correct_answer: "C",
-                difficulty_level: "easy",
+                correctAnswer: "C",
+                difficulty: "easy",
                 explanation: "Paris is the capital and most populous city of France.",
                 lifelines: {
-                    fifty_fifty: ["A", "D"],
-                    audience_poll: { "A": "5%", "B": "10%", "C": "80%", "D": "5%" },
-                    phone_a_friend: "I'm almost certain it's Paris."
+                    '50-50': ["A", "D"],
+                    audience: { "A": "5%", "B": "10%", "C": "80%", "D": "5%" },
+                    friend: "I'm almost certain it's Paris."
                 }
             },
             {
                 question: "Which planet is known as the Red Planet?",
                 options: { A: "Venus", B: "Mars", C: "Jupiter", D: "Saturn" },
-                correct_answer: "B",
-                difficulty_level: "easy",
+                correctAnswer: "B",
+                difficulty: "easy",
                 explanation: "Mars is called the Red Planet due to its reddish appearance.",
                 lifelines: {
-                    fifty_fifty: ["A", "C"],
-                    audience_poll: { "A": "10%", "B": "75%", "C": "10%", "D": "5%" },
-                    phone_a_friend: "I think it's Mars, the red one."
+                    '50-50': ["A", "C"],
+                    audience: { "A": "10%", "B": "75%", "C": "10%", "D": "5%" },
+                    friend: "I think it's Mars, the red one."
                 }
             },
             {
                 question: "What is the largest ocean on Earth?",
                 options: { A: "Atlantic", B: "Indian", C: "Arctic", D: "Pacific" },
-                correct_answer: "D",
-                difficulty_level: "easy",
+                correctAnswer: "D",
+                difficulty: "easy",
                 explanation: "The Pacific Ocean is the largest and deepest ocean on Earth.",
                 lifelines: {
-                    fifty_fifty: ["A", "C"],
-                    audience_poll: { "A": "15%", "B": "10%", "C": "5%", "D": "70%" },
-                    phone_a_friend: "Pacific is the biggest ocean, I'm sure."
+                    '50-50': ["A", "C"],
+                    audience: { "A": "15%", "B": "10%", "C": "5%", "D": "70%" },
+                    friend: "Pacific is the biggest ocean, I'm sure."
                 }
             }
         ],
@@ -101,25 +107,25 @@ function generateFallbackQuestions(category) {
             {
                 question: "Who was the first President of the United States?",
                 options: { A: "George Washington", B: "Thomas Jefferson", C: "Abraham Lincoln", D: "John Adams" },
-                correct_answer: "A",
-                difficulty_level: "easy",
+                correctAnswer: "A",
+                difficulty: "easy",
                 explanation: "George Washington was the first President of the United States.",
                 lifelines: {
-                    fifty_fifty: ["B", "D"],
-                    audience_poll: { "A": "85%", "B": "8%", "C": "5%", "D": "2%" },
-                    phone_a_friend: "Definitely George Washington, the first president."
+                    '50-50': ["B", "D"],
+                    audience: { "A": "85%", "B": "8%", "C": "5%", "D": "2%" },
+                    friend: "Definitely George Washington, the first president."
                 }
             },
             {
                 question: "In which year did World War II end?",
                 options: { A: "1944", B: "1945", C: "1946", D: "1947" },
-                correct_answer: "B",
-                difficulty_level: "easy",
+                correctAnswer: "B",
+                difficulty: "easy",
                 explanation: "World War II ended in 1945 with the surrender of Germany and Japan.",
                 lifelines: {
-                    fifty_fifty: ["A", "C"],
-                    audience_poll: { "A": "5%", "B": "85%", "C": "8%", "D": "2%" },
-                    phone_a_friend: "I think it was 1945, the war ended then."
+                    '50-50': ["A", "C"],
+                    audience: { "A": "5%", "B": "85%", "C": "8%", "D": "2%" },
+                    friend: "I think it was 1945, the war ended then."
                 }
             }
         ],
@@ -127,13 +133,13 @@ function generateFallbackQuestions(category) {
             {
                 question: "What is the chemical symbol for gold?",
                 options: { A: "Go", B: "Gd", C: "Au", D: "Ag" },
-                correct_answer: "C",
-                difficulty_level: "medium",
+                correctAnswer: "C",
+                difficulty: "medium",
                 explanation: "Au is the chemical symbol for gold, from the Latin 'aurum'.",
                 lifelines: {
-                    fifty_fifty: ["A", "B"],
-                    audience_poll: { "A": "10%", "B": "15%", "C": "70%", "D": "5%" },
-                    phone_a_friend: "Gold is Au, I remember that from chemistry."
+                    '50-50': ["A", "B"],
+                    audience: { "A": "10%", "B": "15%", "C": "70%", "D": "5%" },
+                    friend: "Gold is Au, I remember that from chemistry."
                 }
             }
         ]
@@ -147,8 +153,8 @@ function generateFallbackQuestions(category) {
         const baseQuestion = questions[i % questions.length];
         fullQuiz.push({
             ...baseQuestion,
-            question_number: (i + 1).toString(),
-            prize_amount: PRIZE_STRUCTURE[i].toString()
+            questionNumber: (i + 1),
+            prizeValue: PRIZE_STRUCTURE[i]
         });
     }
     
@@ -194,7 +200,15 @@ app.post('/api/users/register', async (req, res) => {
             setTimeout(() => reject(new Error('MongoDB connection timeout')), 10000)
         );
         
-        await Promise.race([connectPromise, timeoutPromise]);
+        try {
+            await Promise.race([connectPromise, timeoutPromise]);
+        } catch (connectionError) {
+            console.error('MongoDB connection failed:', connectionError.message);
+            return res.status(500).json({ 
+                error: 'Database connection failed',
+                details: connectionError.message 
+            });
+        }
         
         console.log('MongoDB connected, getting users collection...');
         const usersCollection = mongoService.getCollection('users');
@@ -250,7 +264,15 @@ app.post('/api/users/login', async (req, res) => {
         }
         
         // Connect to MongoDB
-        await mongoService.connect();
+        try {
+            await mongoService.connect();
+        } catch (connectionError) {
+            console.error('MongoDB connection failed:', connectionError.message);
+            return res.status(500).json({ 
+                error: 'Database connection failed',
+                details: connectionError.message 
+            });
+        }
         const usersCollection = mongoService.getCollection('users');
         
         const user = await usersCollection.findOne({ email });
@@ -268,7 +290,15 @@ app.post('/api/users/login', async (req, res) => {
 app.get('/api/users/:id', async (req, res) => {
     try {
         // Connect to MongoDB
-        await mongoService.connect();
+        try {
+            await mongoService.connect();
+        } catch (connectionError) {
+            console.error('MongoDB connection failed:', connectionError.message);
+            return res.status(500).json({ 
+                error: 'Database connection failed',
+                details: connectionError.message 
+            });
+        }
         const usersCollection = mongoService.getCollection('users');
         
         const user = await usersCollection.findOne({ id: req.params.id });
@@ -296,7 +326,15 @@ app.get('/api/prize-structure', (req, res) => {
 app.get('/api/leaderboard', async (req, res) => {
     try {
         // Connect to MongoDB
-        await mongoService.connect();
+        try {
+            await mongoService.connect();
+        } catch (connectionError) {
+            console.error('MongoDB connection failed:', connectionError.message);
+            return res.status(500).json({ 
+                error: 'Database connection failed',
+                details: connectionError.message 
+            });
+        }
         const usersCollection = mongoService.getCollection('users');
         
         // Sort users by total earnings
@@ -326,7 +364,8 @@ app.get('/api/test', (req, res) => {
         message: 'Server is working!',
         timestamp: new Date().toISOString(),
         geminiConfigured: !!process.env.GEMINI_API_KEY,
-        mongodbUri: process.env.MONGODB_URI ? 'Set' : 'Not Set'
+        mongodbUri: process.env.MONGODB_URI ? 'Set' : 'Not Set',
+        mongodbDbName: process.env.MONGODB_DB_NAME || 'quiz-app'
     });
 });
 
@@ -338,7 +377,8 @@ app.get('/api/debug', (req, res) => {
         environment: {
             nodeEnv: process.env.NODE_ENV,
             vercel: !!process.env.VERCEL,
-            mongodbUri: process.env.MONGODB_URI ? 'Configured' : 'Missing'
+            mongodbUri: process.env.MONGODB_URI ? 'Configured' : 'Missing',
+            mongodbDbName: process.env.MONGODB_DB_NAME || 'quiz-app'
         }
     });
 });
@@ -348,21 +388,33 @@ app.get('/api/test-mongo', async (req, res) => {
     try {
         console.log('Testing MongoDB connection...');
         console.log('MONGODB_URI exists:', !!process.env.MONGODB_URI);
+        console.log('MONGODB_DB_NAME:', process.env.MONGODB_DB_NAME || 'quiz-app');
         
-        await mongoService.connect();
-        const dbName = process.env.MONGODB_DB_NAME || 'quiz-app';
-        
-        res.json({
-            message: 'MongoDB connection successful',
-            database: dbName,
-            timestamp: new Date().toISOString()
-        });
+        try {
+            await mongoService.connect();
+            const dbName = process.env.MONGODB_DB_NAME || 'quiz-app';
+            
+            res.json({
+                message: 'MongoDB connection successful',
+                database: dbName,
+                timestamp: new Date().toISOString()
+            });
+        } catch (connectionError) {
+            console.error('MongoDB connection failed:', connectionError.message);
+            res.status(500).json({
+                error: 'MongoDB connection failed',
+                details: connectionError.message,
+                mongodbUri: process.env.MONGODB_URI ? 'Set' : 'Not Set',
+                mongodbDbName: process.env.MONGODB_DB_NAME || 'quiz-app'
+            });
+        }
     } catch (error) {
         console.error('MongoDB test failed:', error);
         res.status(500).json({
             error: 'MongoDB connection failed',
             details: error.message,
-            mongodbUri: process.env.MONGODB_URI ? 'Set' : 'Not Set'
+            mongodbUri: process.env.MONGODB_URI ? 'Set' : 'Not Set',
+            mongodbDbName: process.env.MONGODB_DB_NAME || 'quiz-app'
         });
     }
 });
@@ -400,17 +452,17 @@ app.post('/api/quiz/generate', async (req, res) => {
                 id: `${Date.now()}_${index}`,
                 question: q.question,
                 options: q.options,
-                correctAnswer: q.correct_answer,
-                difficulty: q.difficulty_level,
+                correctAnswer: q.correctAnswer || q.correct_answer,
+                difficulty: q.difficulty || q.difficulty_level,
                 explanation: q.explanation,
                 category: category,
                 questionNumber: index + 1,
                 prizeValue: PRIZE_STRUCTURE[index],
                 // Include lifelines data
                 lifelines: {
-                    '50-50': q.lifelines.fifty_fifty,
-                    audience: q.lifelines.audience_poll,
-                    friend: q.lifelines.phone_a_friend
+                    '50-50': q.lifelines['50-50'] || q.lifelines.fifty_fifty,
+                    audience: q.lifelines.audience || q.lifelines.audience_poll,
+                    friend: q.lifelines.friend || q.lifelines.phone_a_friend
                 }
             }));
             
@@ -439,16 +491,16 @@ app.post('/api/quiz/generate', async (req, res) => {
                 id: `${Date.now()}_${index}`,
                 question: q.question,
                 options: q.options,
-                correctAnswer: q.correct_answer,
-                difficulty: q.difficulty_level,
+                correctAnswer: q.correctAnswer,
+                difficulty: q.difficulty,
                 explanation: q.explanation,
                 category: category,
                 questionNumber: index + 1,
                 prizeValue: PRIZE_STRUCTURE[index],
                 lifelines: {
-                    '50-50': q.lifelines.fifty_fifty,
-                    audience: q.lifelines.audience_poll,
-                    friend: q.lifelines.phone_a_friend
+                    '50-50': q.lifelines['50-50'],
+                    audience: q.lifelines.audience,
+                    friend: q.lifelines.friend
                 }
             }));
             res.json({ 
@@ -473,7 +525,15 @@ app.post('/api/games/complete', async (req, res) => {
         const { userId, category, questionsAnswered, earnings, isWinner } = req.body;
         
         // Connect to MongoDB
-        await mongoService.connect();
+        try {
+            await mongoService.connect();
+        } catch (connectionError) {
+            console.error('MongoDB connection failed:', connectionError.message);
+            return res.status(500).json({ 
+                error: 'Database connection failed',
+                details: connectionError.message 
+            });
+        }
         const usersCollection = mongoService.getCollection('users');
         const quizzesCollection = mongoService.getCollection('quizzes');
         
@@ -551,10 +611,12 @@ app.get('/api/health', async (req, res) => {
             mongodb: mongoHealthy ? 'connected' : 'disconnected'
         });
     } catch (error) {
+        console.error('Health check error:', error);
         res.json({ 
             status: 'OK', 
             timestamp: new Date().toISOString(),
-            mongodb: 'error'
+            mongodb: 'error',
+            error: error.message
         });
     }
 });
@@ -572,6 +634,7 @@ async function startServer() {
         });
     } catch (error) {
         console.error('Failed to start server:', error);
+        console.error('Server startup failed due to MongoDB connection error');
         process.exit(1);
     }
 }
@@ -579,5 +642,12 @@ async function startServer() {
 if (!process.env.VERCEL) {
   startServer().catch(console.error);
 }
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err);
+    console.error('Error stack:', err.stack);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+});
 
 module.exports = app;
