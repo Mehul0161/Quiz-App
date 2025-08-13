@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: process.env.VITE_API_BASE_URL,
+        target: 'http://quiz-app-b-o-backend.vercel.app',
         changeOrigin: true,
         secure: false
       }
