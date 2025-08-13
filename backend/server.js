@@ -1,9 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const fs = require('fs').promises;
-const path = require('path');
 const GeminiService = require('./geminiService');
+const mongoService = require('./mongoService');
 
 dotenv.config();
 
@@ -42,76 +41,6 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json());
-
-// In-memory database (for development - replace with real database in production)
-let users = [];
-let quizzes = [];
-let questions = [];
-let leaderboard = [];
-
-// Data file paths
-const DATA_DIR = path.join(__dirname, 'data');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const QUIZZES_FILE = path.join(DATA_DIR, 'quizzes.json');
-const QUESTIONS_FILE = path.join(DATA_DIR, 'questions.json');
-const LEADERBOARD_FILE = path.join(DATA_DIR, 'leaderboard.json');
-
-// Initialize data directory and files
-async function initializeData() {
-    try {
-        await fs.mkdir(DATA_DIR, { recursive: true });
-        
-        // Load existing data or create empty files
-        try {
-            users = JSON.parse(await fs.readFile(USERS_FILE, 'utf8'));
-        } catch (error) {
-            users = [];
-            await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
-        }
-        
-        try {
-            quizzes = JSON.parse(await fs.readFile(QUIZZES_FILE, 'utf8'));
-        } catch (error) {
-            quizzes = [];
-            await fs.writeFile(QUIZZES_FILE, JSON.stringify(quizzes, null, 2));
-        }
-        
-        try {
-            questions = JSON.parse(await fs.readFile(QUESTIONS_FILE, 'utf8'));
-        } catch (error) {
-            questions = [];
-            await fs.writeFile(QUESTIONS_FILE, JSON.stringify(questions, null, 2));
-        }
-        
-        try {
-            leaderboard = JSON.parse(await fs.readFile(LEADERBOARD_FILE, 'utf8'));
-        } catch (error) {
-            leaderboard = [];
-            await fs.writeFile(LEADERBOARD_FILE, JSON.stringify(leaderboard, null, 2));
-        }
-        
-        console.log('Data initialized successfully');
-    } catch (error) {
-        console.error('Error initializing data:', error);
-    }
-}
-
-// Save data functions
-async function saveUsers() {
-    await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
-}
-
-async function saveQuizzes() {
-    await fs.writeFile(QUIZZES_FILE, JSON.stringify(quizzes, null, 2));
-}
-
-async function saveQuestions() {
-    await fs.writeFile(QUESTIONS_FILE, JSON.stringify(questions, null, 2));
-}
-
-async function saveLeaderboard() {
-    await fs.writeFile(LEADERBOARD_FILE, JSON.stringify(leaderboard, null, 2));
-}
 
 // Quiz categories
 const QUIZ_CATEGORIES = [
@@ -250,17 +179,20 @@ app.post('/api/users/register', async (req, res) => {
     try {
         const { username, email } = req.body;
         
-        console.log('Registration attempt:', { username, email });
-        
         if (!username || !email) {
-            console.log('Missing username or email');
             return res.status(400).json({ error: 'Username and email are required' });
         }
         
+        // Connect to MongoDB
+        await mongoService.connect();
+        const usersCollection = mongoService.getCollection('users');
+        
         // Check if user already exists
-        const existingUser = users.find(u => u.email === email || u.username === username);
+        const existingUser = await usersCollection.findOne({ 
+            $or: [{ email }, { username }] 
+        });
+        
         if (existingUser) {
-            console.log('User already exists:', existingUser.email);
             return res.status(400).json({ error: 'User already exists' });
         }
         
@@ -275,19 +207,9 @@ app.post('/api/users/register', async (req, res) => {
             createdAt: new Date().toISOString()
         };
         
-        console.log('Creating new user:', newUser);
-        users.push(newUser);
-        
-        try {
-            await saveUsers();
-            console.log('User saved successfully');
-        } catch (saveError) {
-            console.error('Failed to save user to file:', saveError);
-            // Don't fail the registration if file save fails - user is in memory
-        }
+        await usersCollection.insertOne(newUser);
         
         res.status(201).json({ user: newUser });
-        console.log('Registration successful, response sent');
     } catch (error) {
         console.error('Error registering user:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -302,7 +224,11 @@ app.post('/api/users/login', async (req, res) => {
             return res.status(400).json({ error: 'Email is required' });
         }
         
-        const user = users.find(u => u.email === email);
+        // Connect to MongoDB
+        await mongoService.connect();
+        const usersCollection = mongoService.getCollection('users');
+        
+        const user = await usersCollection.findOne({ email });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
@@ -316,7 +242,11 @@ app.post('/api/users/login', async (req, res) => {
 
 app.get('/api/users/:id', async (req, res) => {
     try {
-        const user = users.find(u => u.id === req.params.id);
+        // Connect to MongoDB
+        await mongoService.connect();
+        const usersCollection = mongoService.getCollection('users');
+        
+        const user = await usersCollection.findOne({ id: req.params.id });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
@@ -340,17 +270,23 @@ app.get('/api/prize-structure', (req, res) => {
 // Leaderboard routes
 app.get('/api/leaderboard', async (req, res) => {
     try {
+        // Connect to MongoDB
+        await mongoService.connect();
+        const usersCollection = mongoService.getCollection('users');
+        
         // Sort users by total earnings
-        const sortedUsers = users
-            .sort((a, b) => b.totalEarnings - a.totalEarnings)
-            .slice(0, 50) // Top 50
+        const sortedUsers = await usersCollection
+            .find({})
+            .sort({ totalEarnings: -1 })
+            .limit(50)
             .map((user, index) => ({
                 rank: index + 1,
                 username: user.username,
                 totalEarnings: user.totalEarnings,
                 gamesPlayed: user.gamesPlayed,
                 highestScore: user.highestScore
-            }));
+            }))
+            .toArray();
         
         res.json({ leaderboard: sortedUsers });
     } catch (error) {
@@ -473,25 +409,46 @@ app.post('/api/games/complete', async (req, res) => {
     try {
         const { userId, category, questionsAnswered, earnings, isWinner } = req.body;
         
-        const user = users.find(u => u.id === userId);
+        // Connect to MongoDB
+        await mongoService.connect();
+        const usersCollection = mongoService.getCollection('users');
+        const quizzesCollection = mongoService.getCollection('quizzes');
+        
+        const user = await usersCollection.findOne({ id: userId });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
         
         // Update user stats
-        user.totalEarnings += earnings;
-        user.gamesPlayed += 1;
-        user.highestScore = Math.max(user.highestScore, earnings);
+        const updateResult = await usersCollection.updateOne(
+            { id: userId },
+            { 
+                $inc: { 
+                    totalEarnings: earnings,
+                    gamesPlayed: 1
+                },
+                $max: { highestScore: earnings }
+            }
+        );
         
         // Add achievements
         if (isWinner && !user.achievements.includes('Millionaire')) {
-            user.achievements.push('Millionaire');
+            await usersCollection.updateOne(
+                { id: userId },
+                { $push: { achievements: 'Millionaire' } }
+            );
         }
-        if (user.gamesPlayed === 1 && !user.achievements.includes('First Game')) {
-            user.achievements.push('First Game');
+        if (user.gamesPlayed === 0 && !user.achievements.includes('First Game')) {
+            await usersCollection.updateOne(
+                { id: userId },
+                { $push: { achievements: 'First Game' } }
+            );
         }
-        if (user.gamesPlayed === 10 && !user.achievements.includes('Veteran Player')) {
-            user.achievements.push('Veteran Player');
+        if (user.gamesPlayed === 9 && !user.achievements.includes('Veteran Player')) {
+            await usersCollection.updateOne(
+                { id: userId },
+                { $push: { achievements: 'Veteran Player' } }
+            );
         }
         
         // Save game record
@@ -505,15 +462,15 @@ app.post('/api/games/complete', async (req, res) => {
             completedAt: new Date().toISOString()
         };
         
-        quizzes.push(gameRecord);
+        await quizzesCollection.insertOne(gameRecord);
         
-        await saveUsers();
-        await saveQuizzes();
+        // Get updated user
+        const updatedUser = await usersCollection.findOne({ id: userId });
         
         res.json({ 
-            user, 
+            user: updatedUser, 
             gameRecord,
-            newAchievements: user.achievements.slice(-1) // Return last achievement if any
+            newAchievements: updatedUser.achievements.slice(-1) // Return last achievement if any
         });
     } catch (error) {
         console.error('Error completing game:', error);
@@ -522,27 +479,38 @@ app.post('/api/games/complete', async (req, res) => {
 });
 
 // Health check
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
-
-// Test registration endpoint
-app.post('/api/test-register', (req, res) => {
-    console.log('Test registration endpoint hit');
-    res.json({ 
-        message: 'Test endpoint working',
-        body: req.body,
-        timestamp: new Date().toISOString()
-    });
+app.get('/api/health', async (req, res) => {
+    try {
+        const mongoHealthy = await mongoService.healthCheck();
+        res.json({ 
+            status: 'OK', 
+            timestamp: new Date().toISOString(),
+            mongodb: mongoHealthy ? 'connected' : 'disconnected'
+        });
+    } catch (error) {
+        res.json({ 
+            status: 'OK', 
+            timestamp: new Date().toISOString(),
+            mongodb: 'error'
+        });
+    }
 });
 
 // Start server (disabled on Vercel serverless)
 async function startServer() {
-    await initializeData();
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-        console.log(`Health check: http://localhost:${PORT}/api/health`);
-    });
+    try {
+        // Connect to MongoDB
+        await mongoService.connect();
+        console.log('MongoDB connected successfully');
+        
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+            console.log(`Health check: http://localhost:${PORT}/api/health`);
+        });
+    } catch (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    }
 }
 
 if (!process.env.VERCEL) {
