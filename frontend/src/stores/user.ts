@@ -28,11 +28,16 @@ export const useUserStore = defineStore('user', {
       this.loading = true
       this.error = null
       
+      console.log('Starting registration for:', { username, email })
+      console.log('API Base URL:', API_BASE_URL)
+      
       try {
         const response = await axios.post(`${API_BASE_URL}/users/register`, {
           username,
           email
         })
+        
+        console.log('Registration successful:', response.data)
         
         this.currentUser = response.data.user
         this.isLoggedIn = true
@@ -42,10 +47,12 @@ export const useUserStore = defineStore('user', {
         
         return response.data.user
       } catch (error: any) {
+        console.error('Registration failed:', error)
         this.error = error.response?.data?.error || 'Registration failed'
         throw error
       } finally {
         this.loading = false
+        console.log('Registration process completed')
       }
     },
 
