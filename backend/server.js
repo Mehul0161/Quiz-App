@@ -43,17 +43,6 @@ app.use((req, res, next) => {
 });
 app.use(express.json());
 
-// On Vercel, requests routed to the function may arrive without the '/api' prefix.
-// This middleware normalizes the path by prefixing '/api' if missing.
-if (process.env.VERCEL) {
-  app.use((req, res, next) => {
-    if (!req.url.startsWith('/api')) {
-      req.url = '/api' + req.url;
-    }
-    next();
-  });
-}
-
 // In-memory database (for development - replace with real database in production)
 let users = [];
 let quizzes = [];
