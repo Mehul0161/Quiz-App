@@ -250,13 +250,17 @@ app.post('/api/users/register', async (req, res) => {
     try {
         const { username, email } = req.body;
         
+        console.log('Registration attempt:', { username, email });
+        
         if (!username || !email) {
+            console.log('Missing username or email');
             return res.status(400).json({ error: 'Username and email are required' });
         }
         
         // Check if user already exists
         const existingUser = users.find(u => u.email === email || u.username === username);
         if (existingUser) {
+            console.log('User already exists:', existingUser.email);
             return res.status(400).json({ error: 'User already exists' });
         }
         
@@ -271,10 +275,19 @@ app.post('/api/users/register', async (req, res) => {
             createdAt: new Date().toISOString()
         };
         
+        console.log('Creating new user:', newUser);
         users.push(newUser);
-        await saveUsers();
+        
+        try {
+            await saveUsers();
+            console.log('User saved successfully');
+        } catch (saveError) {
+            console.error('Failed to save user to file:', saveError);
+            // Don't fail the registration if file save fails - user is in memory
+        }
         
         res.status(201).json({ user: newUser });
+        console.log('Registration successful, response sent');
     } catch (error) {
         console.error('Error registering user:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -511,6 +524,16 @@ app.post('/api/games/complete', async (req, res) => {
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Test registration endpoint
+app.post('/api/test-register', (req, res) => {
+    console.log('Test registration endpoint hit');
+    res.json({ 
+        message: 'Test endpoint working',
+        body: req.body,
+        timestamp: new Date().toISOString()
+    });
 });
 
 // Start server (disabled on Vercel serverless)
