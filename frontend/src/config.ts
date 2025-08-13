@@ -1,6 +1,4 @@
-const rawBase: string | undefined = (import.meta as any).env?.API_BASE_URL
-  ? String((import.meta as any).env?.API_BASE_URL)
-  : 'https://quiz-app-b-one.vercel.app/api';
+const rawBase: string | undefined = (import.meta as any).env?.VITE_API_BASE_URL;
 
 // Fallback to same-origin /api in browser if env not provided
 const fallbackBase = typeof window !== 'undefined' ? `${window.location.origin}/api` : '';
