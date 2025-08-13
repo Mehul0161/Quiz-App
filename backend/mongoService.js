@@ -19,10 +19,12 @@ class MongoService {
       this.client = new MongoClient(uri);
       await this.client.connect();
       
-      this.db = this.client.db('quiz-app');
+      // Use environment variable for database name, fallback to 'quiz-app'
+      const dbName = process.env.MONGODB_DB_NAME || 'quiz-app';
+      this.db = this.client.db(dbName);
       this.isConnected = true;
       
-      console.log('Connected to MongoDB Atlas');
+      console.log(`Connected to MongoDB Atlas database: ${dbName}`);
       return this.db;
     } catch (error) {
       console.error('MongoDB connection error:', error);

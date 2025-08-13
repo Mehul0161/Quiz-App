@@ -177,25 +177,40 @@ const PRIZE_STRUCTURE = [
 // User routes
 app.post('/api/users/register', async (req, res) => {
     try {
+        console.log('Registration request received:', { body: req.body });
+        
         const { username, email } = req.body;
         
         if (!username || !email) {
+            console.log('Missing username or email');
             return res.status(400).json({ error: 'Username and email are required' });
         }
         
-        // Connect to MongoDB
-        await mongoService.connect();
+        console.log('Attempting to connect to MongoDB...');
+        
+        // Connect to MongoDB with timeout
+        const connectPromise = mongoService.connect();
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('MongoDB connection timeout')), 10000)
+        );
+        
+        await Promise.race([connectPromise, timeoutPromise]);
+        
+        console.log('MongoDB connected, getting users collection...');
         const usersCollection = mongoService.getCollection('users');
         
+        console.log('Checking if user already exists...');
         // Check if user already exists
         const existingUser = await usersCollection.findOne({ 
             $or: [{ email }, { username }] 
         });
         
         if (existingUser) {
+            console.log('User already exists');
             return res.status(400).json({ error: 'User already exists' });
         }
         
+        console.log('Creating new user...');
         const newUser = {
             id: Date.now().toString(),
             username,
@@ -207,12 +222,22 @@ app.post('/api/users/register', async (req, res) => {
             createdAt: new Date().toISOString()
         };
         
+        console.log('Inserting user into database...');
         await usersCollection.insertOne(newUser);
         
+        console.log('User created successfully:', newUser.id);
         res.status(201).json({ user: newUser });
+        
     } catch (error) {
         console.error('Error registering user:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        
+        // Ensure response is sent
+        if (!res.headersSent) {
+            res.status(500).json({ 
+                error: 'Internal server error',
+                details: error.message 
+            });
+        }
     }
 });
 
@@ -300,8 +325,46 @@ app.get('/api/test', (req, res) => {
     res.json({ 
         message: 'Server is working!',
         timestamp: new Date().toISOString(),
-        geminiConfigured: !!process.env.GEMINI_API_KEY
+        geminiConfigured: !!process.env.GEMINI_API_KEY,
+        mongodbUri: process.env.MONGODB_URI ? 'Set' : 'Not Set'
     });
+});
+
+// Simple test endpoint for debugging
+app.get('/api/debug', (req, res) => {
+    res.json({
+        message: 'Debug endpoint working',
+        timestamp: new Date().toISOString(),
+        environment: {
+            nodeEnv: process.env.NODE_ENV,
+            vercel: !!process.env.VERCEL,
+            mongodbUri: process.env.MONGODB_URI ? 'Configured' : 'Missing'
+        }
+    });
+});
+
+// Test MongoDB connection directly
+app.get('/api/test-mongo', async (req, res) => {
+    try {
+        console.log('Testing MongoDB connection...');
+        console.log('MONGODB_URI exists:', !!process.env.MONGODB_URI);
+        
+        await mongoService.connect();
+        const dbName = process.env.MONGODB_DB_NAME || 'quiz-app';
+        
+        res.json({
+            message: 'MongoDB connection successful',
+            database: dbName,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('MongoDB test failed:', error);
+        res.status(500).json({
+            error: 'MongoDB connection failed',
+            details: error.message,
+            mongodbUri: process.env.MONGODB_URI ? 'Set' : 'Not Set'
+        });
+    }
 });
 
 // Quiz generation routes
