@@ -5,6 +5,7 @@ const GeminiService = require('./geminiService');
 const mongoService = require('./mongoService');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const { ObjectId } = require('mongodb'); // Added ObjectId import
 
 dotenv.config();
 
@@ -54,7 +55,7 @@ const comparePassword = async (password, hashedPassword) => {
 const generateToken = (user) => {
     return jwt.sign(
         { 
-            userId: user._id, 
+            userId: user._id.toString(), 
             username: user.username,
             email: user.email 
         }, 
@@ -254,6 +255,13 @@ app.post('/api/users/register', async (req, res) => {
             gamesPlayed: 0,
             highestScore: 0,
             achievements: [],
+            stats: {
+                normal: { gamesPlayed: 0, totalScore: 0, highestScore: 0, questionsAnswered: 0, lastPlayedAt: null, lastCategory: null },
+                rapidfire: { gamesPlayed: 0, totalScore: 0, highestScore: 0, questionsAnswered: 0, lastPlayedAt: null, lastCategory: null },
+                nooptions: { gamesPlayed: 0, totalScore: 0, highestScore: 0, questionsAnswered: 0, lastPlayedAt: null, lastCategory: null },
+                imagebased: { gamesPlayed: 0, totalScore: 0, highestScore: 0, questionsAnswered: 0, lastPlayedAt: null, lastCategory: null },
+            },
+            gameHistory: [], // Initialize game history
             createdAt: new Date().toISOString()
         };
         
@@ -368,7 +376,7 @@ app.get('/api/users/profile/me', authenticateToken, async (req, res) => {
         }
         const usersCollection = mongoService.getCollection('users');
         
-        const user = await usersCollection.findOne({ _id: req.user.userId });
+        const user = await usersCollection.findOne({ _id: new ObjectId(req.user.userId) });
         
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -552,7 +560,7 @@ async function generateNormalQuestions(category) {
 			return generateFallbackQuestions(category)
 		}
 
-		const aiResponse = await geminiService.generateQuestions(category)
+		const aiResponse = await geminiService.generateNewQuestions(category)
 		console.log('AI Response received for Normal Mode')
 		
         if (aiResponse && aiResponse.content && aiResponse.content.questions) {
@@ -589,47 +597,63 @@ async function generateNormalQuestions(category) {
 	}
 }
 
-// Generate rapid fire questions using AI
+// Generate rapid fire questions from database (unlimited pool)
 async function generateRapidFireQuestions(category) {
 	try {
-		console.log(`Generating AI questions for Rapid Fire Mode - Category: ${category}`)
-		
-		// Check if Gemini API key is available
-		if (!process.env.GEMINI_API_KEY) {
-			console.error('GEMINI_API_KEY not found, using fallback questions')
-			return generateFallbackQuestions(category)
-		}
+		console.log(`Fetching unlimited questions for Rapid Fire Mode - Category: ${category}`);
 
-		const aiResponse = await geminiService.generateQuestions(category)
-		console.log('AI Response received for Rapid Fire Mode')
-		
-		if (aiResponse && aiResponse.content && aiResponse.content.questions) {
-			const questions = aiResponse.content.questions
-			console.log(`Processing ${questions.length} AI questions for Rapid Fire Mode`)
-			
-			// Transform AI response to match frontend format (simplified for rapid fire)
-			const transformedQuestions = questions.map((q, index) => ({
+		// Get all available questions from database for unlimited rapid fire
+		const allQuestions = await geminiService.getQuestionsFromDB(category);
+
+		if (allQuestions && allQuestions.length > 0) {
+			console.log(`Using ${allQuestions.length} database questions for Rapid Fire Mode`);
+
+			// Transform all questions for rapid fire (unlimited pool)
+			const transformedQuestions = allQuestions.map((q, index) => ({
 				id: `rapidfire_${Date.now()}_${index}`,
 				question: q.question,
 				options: q.options,
 				correctAnswer: q.correct_answer,
-				difficulty: 'medium', // Rapid fire is generally medium difficulty
+				difficulty: q.difficulty_level,
 				explanation: q.explanation,
 				category: category,
 				questionNumber: index + 1,
-				prizeValue: PRIZE_STRUCTURE[index]
+				// No prize value for rapid fire - uses scoring system instead
 				// No lifelines for rapid fire mode
-			}))
-			
-			console.log('Successfully transformed AI questions for Rapid Fire Mode')
-			return transformedQuestions
+			}));
+
+			console.log('Successfully transformed database questions for Rapid Fire Mode');
+			return transformedQuestions;
 		} else {
-			throw new Error('Invalid AI response format')
+			// Fallback to AI generation if no database questions
+			console.log('No database questions found, generating new ones for Rapid Fire Mode');
+			const aiResponse = await geminiService.generateQuestions(category);
+
+			if (aiResponse && aiResponse.content && aiResponse.content.questions) {
+				const questions = aiResponse.content.questions;
+				console.log(`Processing ${questions.length} AI questions for Rapid Fire Mode`);
+
+				const transformedQuestions = questions.map((q, index) => ({
+					id: `rapidfire_${Date.now()}_${index}`,
+					question: q.question,
+					options: q.options,
+					correctAnswer: q.correct_answer,
+					difficulty: q.difficulty_level,
+					explanation: q.explanation,
+					category: category,
+					questionNumber: index + 1,
+				}));
+
+				console.log('Successfully transformed AI questions for Rapid Fire Mode');
+				return transformedQuestions;
+			} else {
+				throw new Error('Invalid AI response format');
+			}
 		}
 	} catch (error) {
-		console.error('Error generating Rapid Fire questions:', error)
-		console.log('Falling back to static questions for Rapid Fire Mode')
-		return generateFallbackQuestions(category)
+		console.error('Error generating Rapid Fire questions:', error);
+		console.log('Falling back to static questions for Rapid Fire Mode');
+		return generateFallbackQuestions(category);
 	}
 }
 
@@ -787,22 +811,63 @@ app.post('/api/games/complete', authenticateToken, async (req, res) => {
         }
         const usersCollection = mongoService.getCollection('users');
         
-        const { finalScore, questionsAnswered } = req.body;
+        const { finalScore, questionsAnswered, gameMode, rapidFireScore, category } = req.body;
         const userId = req.user.userId;
         
-        if (typeof finalScore !== 'number' || typeof questionsAnswered !== 'number') {
-            return res.status(400).json({ error: 'Invalid score data' });
+        if (typeof questionsAnswered !== 'number') {
+            return res.status(400).json({ error: 'Invalid questions answered data' });
+        }
+        
+        let scoreToAdd = finalScore || 0;
+        
+        // Handle rapid fire scoring differently
+        if (gameMode === 'rapidfire' && typeof rapidFireScore === 'number') {
+            scoreToAdd = rapidFireScore; // Use rapid fire score instead of prize-based score
+        }
+        
+        const modeKey = gameMode || 'normal';
+        const nowIso = new Date().toISOString();
+
+        // Create a record for the user's game history
+        const gameRecord = {
+            gameId: new ObjectId(),
+            gameMode: modeKey,
+            category: category,
+            score: scoreToAdd,
+            questionsAnswered: questionsAnswered,
+            playedAt: nowIso
+        };
+
+        // Build dynamic update for per-mode stats
+        const incFields = {
+            totalEarnings: scoreToAdd,
+            gamesPlayed: 1,
+        };
+        incFields[`stats.${modeKey}.gamesPlayed`] = 1;
+        incFields[`stats.${modeKey}.totalScore`] = scoreToAdd;
+        incFields[`stats.${modeKey}.questionsAnswered`] = questionsAnswered;
+
+        const maxFields = {
+            highestScore: scoreToAdd,
+        };
+        maxFields[`stats.${modeKey}.highestScore`] = scoreToAdd;
+
+        const setFields = {
+            lastPlayedAt: nowIso,
+        };
+        setFields[`stats.${modeKey}.lastPlayedAt`] = nowIso;
+        if (category) {
+            setFields[`stats.${modeKey}.lastCategory`] = category;
         }
         
         // Update user stats
         const result = await usersCollection.updateOne(
-            { _id: userId },
+            { _id: new ObjectId(userId) },
             { 
-                $inc: { 
-                    totalEarnings: finalScore,
-                    gamesPlayed: 1
-                },
-                $max: { highestScore: finalScore }
+                $inc: incFields,
+                $max: maxFields,
+                $set: setFields,
+                $push: { gameHistory: { $each: [gameRecord], $slice: -50 } } // Keep last 50 games
             }
         );
         
@@ -813,8 +878,10 @@ app.post('/api/games/complete', authenticateToken, async (req, res) => {
         res.json({ 
             success: true, 
             message: 'Game completed successfully',
-            finalScore,
-            questionsAnswered
+            finalScore: scoreToAdd,
+            questionsAnswered,
+            gameMode,
+            category
         });
     } catch (error) {
         console.error('Error completing game:', error);
@@ -859,15 +926,193 @@ app.get('/api/questions/stats', async (req, res) => {
                 $group: {
                     _id: '$category',
                     count: { $sum: 1 },
-                    difficulties: { $addToSet: '$difficulty_level' }
+                    difficulties: { $addToSet: '$difficulty_level' },
+                    usedCount: { $sum: { $cond: ['$used', 1, 0] } },
+                    unusedCount: { $sum: { $cond: ['$used', 0, 1] } }
                 }
             }
         ]).toArray();
         
-        res.json({ success: true, stats });
+        // Add limit information to each category
+        const enhancedStats = stats.map(stat => ({
+            ...stat,
+            limit: 100,
+            remaining: Math.max(0, 100 - stat.count),
+            isFull: stat.count >= 100
+        }));
+        
+        res.json({ 
+            success: true, 
+            stats: enhancedStats,
+            summary: {
+                totalCategories: enhancedStats.length,
+                totalQuestions: enhancedStats.reduce((sum, stat) => sum + stat.count, 0),
+                maxQuestionsPossible: enhancedStats.length * 100
+            }
+        });
     } catch (error) {
         console.error('Error fetching question stats:', error);
         res.status(500).json({ error: 'Failed to fetch question statistics' });
+    }
+});
+
+// Admin endpoint to clean up old questions and regenerate pools
+app.post('/api/admin/refresh-questions', async (req, res) => {
+    try {
+        const { category, action = 'generate' } = req.body;
+        
+        if (!category) {
+            return res.status(400).json({ error: 'Category is required' });
+        }
+        
+        if (action === 'cleanup') {
+            // Remove questions that have been used multiple times
+            const questionsCollection = mongoService.getCollection('questions');
+            const result = await questionsCollection.deleteMany({
+                category: category,
+                useCount: { $gte: 3 } // Remove questions used 3+ times
+            });
+            
+            res.json({ 
+                success: true, 
+                message: `Cleaned up ${result.deletedCount} overused questions for ${category}`,
+                deletedCount: result.deletedCount
+            });
+        } else if (action === 'generate') {
+            // Generate new question pool (will automatically maintain 100 questions)
+            const questions = await geminiService.generateQuestionPool(category, 100);
+            
+            res.json({ 
+                success: true, 
+                message: `Generated ${questions.length} new questions for ${category} (maintaining 100 question limit)`,
+                questionsGenerated: questions.length
+            });
+        }
+    } catch (error) {
+        console.error('Error refreshing questions:', error);
+        res.status(500).json({ error: 'Failed to refresh questions' });
+    }
+});
+
+// Get detailed question information for admin
+app.get('/api/admin/questions/:category', async (req, res) => {
+    try {
+        const { category } = req.params;
+        const { limit = 50, page = 1 } = req.query;
+        
+        if (!mongoService.isConnected) {
+            return res.status(503).json({ error: 'Database not available' });
+        }
+        
+        const questionsCollection = mongoService.getCollection('questions');
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        const questions = await questionsCollection.find({ category })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit))
+            .toArray();
+            
+        const total = await questionsCollection.countDocuments({ category });
+        
+        res.json({ 
+            success: true, 
+            questions,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / parseInt(limit))
+            },
+            limitInfo: {
+                current: total,
+                max: 100,
+                remaining: Math.max(0, 100 - total)
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching questions:', error);
+        res.status(500).json({ error: 'Failed to fetch questions' });
+    }
+});
+
+// Force maintain question limit for a category
+app.post('/api/admin/maintain-limit/:category', async (req, res) => {
+    try {
+        const { category } = req.params;
+        const { limit = 100 } = req.body;
+        
+        if (!mongoService.isConnected) {
+            return res.status(503).json({ error: 'Database not available' });
+        }
+        
+        await geminiService.maintainQuestionLimit(category, limit);
+        
+        const questionsCollection = mongoService.getCollection('questions');
+        const total = await questionsCollection.countDocuments({ category });
+        
+        res.json({ 
+            success: true, 
+            message: `Question limit maintained for ${category}`,
+            currentCount: total,
+            targetLimit: limit
+        });
+    } catch (error) {
+        console.error('Error maintaining question limit:', error);
+        res.status(500).json({ error: 'Failed to maintain question limit' });
+    }
+});
+
+// Refresh all categories to have exactly 100 questions
+app.post('/api/admin/refresh-all-categories', async (req, res) => {
+    try {
+        if (!mongoService.isConnected) {
+            return res.status(503).json({ error: 'Database not available' });
+        }
+        
+        const questionsCollection = mongoService.getCollection('questions');
+        const categories = await questionsCollection.distinct('category');
+        
+        const results = [];
+        for (const category of categories) {
+            try {
+                const currentCount = await geminiService.getQuestionCount(category);
+                if (currentCount < 100) {
+                    const questionsToGenerate = 100 - currentCount;
+                    console.log(`Generating ${questionsToGenerate} questions for ${category}`);
+                    
+                    const newQuestions = await geminiService.generateQuestionPool(category, questionsToGenerate);
+                    results.push({
+                        category,
+                        previousCount: currentCount,
+                        newCount: await geminiService.getQuestionCount(category),
+                        questionsGenerated: newQuestions.length
+                    });
+                } else {
+                    results.push({
+                        category,
+                        previousCount: currentCount,
+                        newCount: currentCount,
+                        questionsGenerated: 0,
+                        message: 'Already at limit'
+                    });
+                }
+            } catch (error) {
+                results.push({
+                    category,
+                    error: error.message
+                });
+            }
+        }
+        
+        res.json({ 
+            success: true, 
+            message: 'Refreshed all categories',
+            results
+        });
+    } catch (error) {
+        console.error('Error refreshing all categories:', error);
+        res.status(500).json({ error: 'Failed to refresh all categories' });
     }
 });
 

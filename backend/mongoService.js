@@ -47,9 +47,14 @@ class MongoService {
     return this.db.collection(collectionName);
   }
 
+  getStatisticsCollection() {
+    return this.getCollection('statistics');
+  }
+
   // Health check
   async healthCheck() {
     try {
+      await this.connect();
       await this.db.admin().ping();
       return true;
     } catch (error) {

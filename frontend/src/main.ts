@@ -12,6 +12,8 @@ import GameSetup from './components/GameSetup.vue'
 import QuizGame from './components/QuizGame.vue'
 import Leaderboard from './components/Leaderboard.vue'
 import Profile from './components/Profile.vue'
+import Result from './components/Result.vue';
+import Statistics from './components/Statistics.vue'
 
 // Create router
 const router = createRouter({
@@ -38,6 +40,16 @@ const router = createRouter({
     { 
       path: '/profile', 
       component: Profile,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/result',
+      component: Result,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/statistics',
+      component: Statistics,
       meta: { requiresAuth: true }
     }
   ]

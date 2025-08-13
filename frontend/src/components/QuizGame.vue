@@ -6,15 +6,30 @@
 				<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
 					<div class="flex-1">
 						<h1 class="text-xl md:text-2xl font-bold text-white mb-1">
-							Question {{ currentQuestionIndex + 1 }} of {{ totalQuestions }}
+							<span v-if="quizStore.gameMode?.id === 'rapidfire'">
+								Rapid Fire Mode!
+							</span>
+							<span v-else>
+								Question {{ currentQuestionIndex + 1 }} of {{ totalQuestions }}
+							</span>
 							<span class="text-indigo-400 block sm:inline">- {{ quizStore.category }}</span>
 						</h1>
 						<p class="text-sm text-neutral-400">Mode: {{ quizStore.gameMode?.name }}</p>
 					</div>
 					<div class="text-left sm:text-right">
-						<div class="text-xl md:text-2xl font-bold text-yellow-400 mb-1">${{ currentPrize.toLocaleString() }}</div>
-						<div v-if="quizStore.gameMode?.timeLimit" class="text-sm text-neutral-400">
-							Time: <span :class="getTimeColor()">{{ formatTime(timeRemaining) }}</span>
+						<!-- Rapid Fire Score Display -->
+						<div v-if="quizStore.gameMode?.id === 'rapidfire'" class="text-center">
+							<div class="text-xl md:text-2xl font-bold text-green-400 mb-1">{{ rapidFireScore }} pts</div>
+							<div class="text-sm text-neutral-400">
+								Time: <span :class="getTimeColor()">{{ formatTime(timeRemaining) }}</span>
+							</div>
+						</div>
+						<!-- Normal Prize Display -->
+						<div v-else>
+							<div class="text-xl md:text-2xl font-bold text-yellow-400 mb-1">${{ currentPrize.toLocaleString() }}</div>
+							<div v-if="quizStore.gameMode?.timeLimit" class="text-sm text-neutral-400">
+								Time: <span :class="getTimeColor()">{{ formatTime(timeRemaining) }}</span>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -134,23 +149,47 @@
 				<!-- Right Column: Prize Ladder (1/3 width) -->
 				<div class="flex-[1] min-w-[280px] max-w-[450px] xl:max-w-none">
 					<div class="card p-4 shadow-lg border-2 border-neutral-700 h-fit">
-						<h3 class="text-lg font-bold text-white mb-3 text-center">Prize Ladder</h3>
+						<h3 class="text-lg font-bold text-white mb-3 text-center">
+							{{ quizStore.gameMode?.id === 'rapidfire' ? 'Rapid Fire Rewards' : 'Prize Ladder' }}
+						</h3>
 						<div class="space-y-1.5 max-h-[70vh] overflow-y-auto custom-scrollbar pr-1">
-							<div
-								v-for="(prize, index) in prizeStructure"
-								:key="index"
-								:class="getPrizeClass(index)"
-								class="flex items-center justify-between p-2 rounded-lg border-2 transition-all duration-300 hover:scale-[1.01] transform"
-							>
-								<div class="flex items-center gap-2">
-									<div class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold shadow-sm" :class="getPrizeNumberClass(index)">
-										{{ prizeStructure.length - index }}
+							<!-- Rapid Fire Prize Ladder -->
+							<div v-if="quizStore.gameMode?.id === 'rapidfire'">
+								<div
+									v-for="(prize, index) in rapidFirePrizeStructure.slice().reverse()"
+									:key="index"
+									:class="getRapidFirePrizeClass(prize)"
+									class="flex items-center justify-between p-2 rounded-lg border-2 transition-all duration-300"
+								>
+									<div class="flex items-center gap-2">
+										<div class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold shadow-sm" :class="getRapidFirePrizeNumberClass(prize)">
+											🏆
+										</div>
+										<span class="font-bold text-xs" :class="getRapidFirePrizeTextClass(prize)">{{ prize }} Points</span>
 									</div>
-									<span class="font-bold text-xs" :class="getPrizeTextClass(index)">${{ prize.toLocaleString() }}</span>
+									<div class="flex items-center">
+										<div v-if="rapidFireScore >= prize" class="text-base text-green-400">✅</div>
+									</div>
 								</div>
-								<div class="flex items-center">
-									<div v-if="prizeStructure.length - 1 - index === currentQuestionIndex" class="text-base animate-pulse">🎯</div>
-									<div v-else-if="prizeStructure.length - 1 - index < currentQuestionIndex" class="text-base text-green-400">✅</div>
+							</div>
+							<!-- Standard Prize Ladder -->
+							<div v-else>
+								<div
+									v-for="(prize, index) in prizeStructure"
+									:key="index"
+									:class="getPrizeClass(index)"
+									class="flex items-center justify-between p-2 rounded-lg border-2 transition-all duration-300 hover:scale-[1.01] transform"
+								>
+									<div class="flex items-center gap-2">
+										<div class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold shadow-sm" :class="getPrizeNumberClass(index)">
+											{{ prizeStructure.length - index }}
+										</div>
+										<span class="font-bold text-xs" :class="getPrizeTextClass(index)">${{ prize.toLocaleString() }}</span>
+									</div>
+									<div class="flex items-center">
+										<div v-if="prizeStructure.length - 1 - index === currentQuestionIndex" class="text-base animate-pulse">🎯</div>
+										<div v-else-if="prizeStructure.length - 1 - index < currentQuestionIndex" class="text-base text-green-400">✅</div>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -178,6 +217,9 @@ import { useQuizStore } from '../stores/quiz'
 const router = useRouter()
 const quizStore = useQuizStore()
 
+// Expose the rapid fire prize structure to the template
+const rapidFirePrizeStructure = computed(() => quizStore.rapidFirePrizeStructure);
+
 const answered = ref(false)
 const isCorrect = ref(false)
 const timeRemaining = ref(30)
@@ -185,6 +227,7 @@ const textAnswer = ref('')
 const showLifelineModal = ref(false)
 const activeLifeline = ref<any>(null)
 const hiddenOptions = ref<string[]>([])
+const rapidFireScore = ref(0)
 
 // For double-click
 const provisionalAnswer = ref('')
@@ -197,7 +240,14 @@ const currentQuestionIndex = computed(() => quizStore.currentQuestionIndex)
 const totalQuestions = computed(() => quizStore.totalQuestions)
 const currentQuestion = computed(() => quizStore.currentQuestion)
 const prizeStructure = computed(() => quizStore.prizeStructure.slice().reverse()) // Reversed for display
+
 const currentPrize = computed(() => {
+	if (quizStore.gameMode?.id === 'rapidfire') {
+		// Find the highest prize achieved based on score
+		const currentScore = rapidFireScore.value;
+		return [...quizStore.rapidFirePrizeStructure].reverse().find(prize => currentScore >= prize) || 0;
+	}
+
 	if (answered.value && !isCorrect.value) {
 		// Find safe haven
 		if (currentQuestionIndex.value >= 10) return quizStore.prizeStructure[9]
@@ -265,10 +315,19 @@ const startTimer = () => {
 }
 
 const timeUp = () => {
-	if (timer) clearInterval(timer)
-	answered.value = true
-	isCorrect.value = false
-}
+	if (timer) clearInterval(timer);
+	if (quizStore.gameMode?.id === 'rapidfire') {
+		completeGame();
+	} else {
+		// For normal modes, end the game when time runs out
+		answered.value = true;
+		isCorrect.value = false;
+		// End the game after showing the incorrect answer
+		setTimeout(() => {
+			completeGame();
+		}, 1500);
+	}
+};
 
 const formatTime = (seconds: number) => {
 	const mins = Math.floor(seconds / 60)
@@ -335,6 +394,40 @@ const getPrizeTextClass = (index: number) => {
 	return 'text-neutral-400'
 }
 
+const getRapidFirePrizeClass = (prize: number) => {
+	const nextPrize = [...quizStore.rapidFirePrizeStructure].find(p => p > rapidFireScore.value) || Infinity;
+	if (rapidFireScore.value >= prize) {
+		return 'bg-green-600/20 border-green-500 shadow-green-500/20 shadow-md';
+	}
+	if (prize === nextPrize) {
+		return 'bg-indigo-600/20 border-indigo-500 shadow-indigo-500/20 shadow-lg';
+	}
+	return 'bg-neutral-800/50 border-neutral-600';
+};
+
+const getRapidFirePrizeNumberClass = (prize: number) => {
+	const nextPrize = [...quizStore.rapidFirePrizeStructure].find(p => p > rapidFireScore.value) || Infinity;
+	if (rapidFireScore.value >= prize) {
+		return 'bg-green-600 text-white';
+	}
+	if (prize === nextPrize) {
+		return 'bg-indigo-600 text-white animate-pulse';
+	}
+	return 'bg-neutral-700 text-neutral-300';
+};
+
+const getRapidFirePrizeTextClass = (prize: number) => {
+	const nextPrize = [...quizStore.rapidFirePrizeStructure].find(p => p > rapidFireScore.value) || Infinity;
+	if (rapidFireScore.value >= prize) {
+		return 'text-green-300';
+	}
+	if (prize === nextPrize) {
+		return 'text-indigo-300';
+	}
+	return 'text-neutral-400';
+};
+
+
 const handleAnswerClick = (key: string) => {
 	if (answered.value || timeRemaining.value <= 0) return
 
@@ -348,14 +441,26 @@ const handleAnswerClick = (key: string) => {
 }
 
 const confirmAnswer = (answer: string) => {
-	if (answered.value || timeRemaining.value <= 0) return
-	
-	answered.value = true
-	isCorrect.value = quizStore.answerQuestion(answer)
-	
-	if (timer) clearInterval(timer)
+	if (answered.value || (timeRemaining.value <= 0 && quizStore.gameMode?.id !== 'rapidfire')) return;
 
-	// Auto-advance after correct answer
+	answered.value = true;
+	isCorrect.value = quizStore.answerQuestion(answer);
+	
+	if (quizStore.gameMode?.id === 'rapidfire') {
+		if(isCorrect.value) {
+			rapidFireScore.value += 5;
+		} else {
+			rapidFireScore.value = Math.max(0, rapidFireScore.value - 3);
+		}
+		setTimeout(() => {
+			nextQuestion();
+		}, 500); // Shorter delay for rapid fire
+		return;
+	}
+
+	if (timer) clearInterval(timer);
+
+	// Auto-advance after correct answer for normal modes
 	if (isCorrect.value) {
 		setTimeout(() => {
 			if (isLastQuestion.value) {
@@ -365,6 +470,10 @@ const confirmAnswer = (answer: string) => {
 				resetQuestion()
 			}
 		}, 900)
+	} else if (quizStore.gameMode?.id === 'normal') {
+		setTimeout(() => {
+			completeGame();
+		}, 900);
 	}
 }
 
@@ -430,40 +539,75 @@ const getLifelineResult = (lifelineId: string) => {
 }
 
 const nextQuestion = () => {
-	if (isLastQuestion.value) {
-		completeGame()
-	} else {
-		quizStore.nextQuestion()
-		resetQuestion()
+	if (quizStore.gameMode?.id === 'rapidfire') {
+		if (timeRemaining.value > 0) {
+			quizStore.nextQuestion();
+			resetQuestion();
+		} else {
+			completeGame();
+		}
+		return;
 	}
-}
+
+	if (isLastQuestion.value) {
+		completeGame();
+	} else {
+		quizStore.nextQuestion();
+		resetQuestion();
+	}
+};
 
 const resetQuestion = () => {
-	answered.value = false
-	isCorrect.value = false
-	provisionalAnswer.value = ''
-	textAnswer.value = ''
-	showLifelineModal.value = false
-	activeLifeline.value = null
-	hiddenOptions.value = []
-	
-	// Reset lifeline usage for new question
-	availableLifelines.value.forEach(lifeline => {
-		lifeline.used = false
-	})
-	
-	startTimer()
-}
+	answered.value = false;
+	isCorrect.value = false;
+	provisionalAnswer.value = '';
+	textAnswer.value = '';
+	showLifelineModal.value = false;
+	activeLifeline.value = null;
+	hiddenOptions.value = [];
+
+	// For normal modes, restart timer per question
+	if (quizStore.gameMode?.id !== 'rapidfire') {
+		startTimer();
+	}
+};
 
 const walkAway = async () => {
-	await quizStore.completeGame(currentPrize.value)
-	router.push('/dashboard')
-}
+	let questionsAnswered = currentQuestionIndex.value;
+	
+	// If the user answered at least one question, count it
+	if (answered.value) {
+		questionsAnswered = Math.max(1, currentQuestionIndex.value + 1);
+	}
+	
+	// Update the quiz store's current question index before completing the game
+	quizStore.currentQuestionIndex = questionsAnswered;
+	
+	await quizStore.completeGame(currentPrize.value);
+	router.push('/result');
+};
 
 const completeGame = async () => {
-	await quizStore.completeGame(currentPrize.value)
-	router.push('/dashboard')
-}
+	let finalScore = currentPrize.value;
+	let questionsAnswered = currentQuestionIndex.value;
+	
+	// If the game ended due to wrong answer or time out, we need to count the current question
+	if (answered.value && currentQuestionIndex.value === 0) {
+		questionsAnswered = 1; // At least one question was attempted
+	} else if (answered.value) {
+		questionsAnswered = currentQuestionIndex.value + 1; // Include the current question
+	}
+	
+	if(quizStore.gameMode?.id === 'rapidfire') {
+		finalScore = rapidFireScore.value;
+	}
+	
+	// Update the quiz store's current question index before completing the game
+	quizStore.currentQuestionIndex = questionsAnswered;
+	
+	await quizStore.completeGame(finalScore);
+	router.push('/result');
+};
 
 const apply5050Lifeline = () => {
 	const question = currentQuestion.value

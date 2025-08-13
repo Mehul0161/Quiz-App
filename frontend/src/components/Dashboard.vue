@@ -54,7 +54,7 @@
 			</div>
 
 			<!-- Quick Actions -->
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
 				<router-link to="/setup" class="card border-2 border-indigo-500/50 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 hover:from-indigo-600/30 hover:to-purple-600/30 text-white p-8 text-center transition-all duration-300 hover:scale-105 transform hover:shadow-2xl group">
 					<div class="text-6xl mb-4 group-hover:animate-float">🎮</div>
 					<h3 class="text-2xl font-bold mb-3">Start New Game</h3>
@@ -72,6 +72,21 @@
 						Check Rankings <span class="group-hover:translate-x-1 transition-transform">→</span>
 					</div>
 				</router-link>
+			</div>
+
+			<!-- Statistics Section -->
+			<div class="mb-8">
+				<h3 class="text-2xl font-bold text-white mb-4 text-center">Statistics</h3>
+				<div class="grid grid-cols-1 md:grid-cols-1 gap-8">
+					<router-link to="/statistics" class="card border-2 border-green-500/50 bg-gradient-to-br from-green-600/20 to-teal-600/20 hover:from-green-600/30 hover:to-teal-600/30 text-white p-8 text-center transition-all duration-300 hover:scale-105 transform hover:shadow-2xl group">
+						<div class="text-6xl mb-4 group-hover:animate-float">📊</div>
+						<h3 class="text-2xl font-bold mb-3">My Statistics</h3>
+						<p class="text-neutral-200 text-lg mb-4">Check your detailed game stats</p>
+						<div class="inline-flex items-center gap-2 text-green-300 font-semibold">
+							View My Stats <span class="group-hover:translate-x-1 transition-transform">→</span>
+						</div>
+					</router-link>
+				</div>
 			</div>
 
 			<!-- Recent Activity -->
@@ -109,9 +124,10 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const getWinRate = () => {
-	if (!userStore.currentUser?.gamesPlayed || userStore.currentUser.gamesPlayed === 0) return 0
-	// Simple calculation - you can make this more sophisticated
-	return Math.round((userStore.currentUser.totalEarnings / (userStore.currentUser.gamesPlayed * 1000)) * 100)
+	if (!userStore.currentUser?.gamesPlayed || userStore.currentUser.gamesPlayed === 0) return 0;
+	// A simple win is any game where the user earned more than $0.
+	const wins = userStore.currentUser.gameHistory?.filter(game => game.score > 0).length || 0;
+	return Math.round((wins / userStore.currentUser.gamesPlayed) * 100);
 }
 
 const formatDate = (dateString?: string) => {

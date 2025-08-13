@@ -11,6 +11,7 @@ export interface User {
   gamesPlayed: number
   highestScore?: number
   createdAt: string
+  gameHistory: any[]
 }
 
 export const useUserStore = defineStore('user', () => {
@@ -36,8 +37,8 @@ export const useUserStore = defineStore('user', () => {
         // Set axios default header
         axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`
         
-        // Verify token with backend
-        verifyToken()
+        // Verify token with backend and fetch fresh data
+        fetchCurrentUser();
       } catch (err) {
         console.error('Error parsing stored user data:', err)
         clearAuth()
@@ -71,18 +72,40 @@ export const useUserStore = defineStore('user', () => {
 
   // Fetch current user data
   const fetchCurrentUser = async () => {
-    if (!token.value) return
+    if (!token.value) {
+      console.warn('No token available for fetching user profile')
+      return
+    }
     
     try {
+      console.log('Fetching user profile with token:', token.value ? 'Present' : 'Missing')
       const response = await axios.get(`${API_BASE_URL}/users/profile/me`, {
-        headers: { Authorization: `Bearer ${token.value}` }
+        headers: { 
+          Authorization: `Bearer ${token.value}`,
+          'Content-Type': 'application/json'
+        }
       })
       
-      currentUser.value = response.data.user
-      localStorage.setItem('quiz_user', JSON.stringify(response.data.user))
+      if (response.data && response.data.user) {
+        currentUser.value = response.data.user
+        localStorage.setItem('quiz_user', JSON.stringify(response.data.user))
+        console.log('User profile fetched successfully')
+      } else {
+        console.error('Invalid response format:', response.data)
+      }
     } catch (err: any) {
       console.error('Error fetching user profile:', err)
+      console.error('Error details:', {
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        url: err.config?.url,
+        method: err.config?.method,
+        headers: err.config?.headers
+      })
+      
       if (err.response?.status === 401 || err.response?.status === 403) {
+        console.log('Authentication failed, clearing auth')
         clearAuth()
       }
     }

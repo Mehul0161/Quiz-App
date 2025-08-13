@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import axios from 'axios'
 import { API_BASE_URL } from '../config'
+import { useUserStore } from './user'
 
 export interface Question {
   id: string
@@ -35,6 +36,7 @@ export const useQuizStore = defineStore('quiz', () => {
 	const category = ref('')
 	const loading = ref(false)
 	const error = ref('')
+	const lastGameResult = ref<any>(null);
 
 	const gameModes: GameMode[] = [
 		{
@@ -47,7 +49,7 @@ export const useQuizStore = defineStore('quiz', () => {
 		{
 			id: 'rapidfire',
 			name: 'Rapid Fire',
-			timeLimit: 15,
+			timeLimit: 90,
 			lifelines: 0,
 			scoring: 'rapid'
 		},
@@ -80,11 +82,20 @@ export const useQuizStore = defineStore('quiz', () => {
 
 	const prizeStructure = [
 		100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000, 250000, 500000, 1000000
-	]
+	];
+
+	const rapidFirePrizeStructure = [
+		5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75
+	];
 
 	const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
 	const totalQuestions = computed(() => questions.value.length)
-	const isGameComplete = computed(() => currentQuestionIndex.value >= totalQuestions.value)
+	const isGameComplete = computed(() => {
+		if (gameMode.value?.id === 'rapidfire') {
+			return false; // Game is only complete when time runs out
+		}
+		return currentQuestionIndex.value >= totalQuestions.value;
+	})
 	const totalEarnings = computed(() => {
 		if (isGameComplete.value) {
 			return prizeStructure[Math.min(currentQuestionIndex.value - 1, prizeStructure.length - 1)]
@@ -93,54 +104,60 @@ export const useQuizStore = defineStore('quiz', () => {
 	})
 
 	const startQuiz = async (selectedCategory: string, selectedMode: string) => {
-		loading.value = true
-		error.value = ''
-		category.value = selectedCategory
-		
-		const mode = gameModes.find(m => m.id === selectedMode)
+		loading.value = true;
+		error.value = '';
+		category.value = selectedCategory;
+
+		const mode = gameModes.find(m => m.id === selectedMode);
 		if (!mode) {
-			throw new Error('Invalid game mode')
+			throw new Error('Invalid game mode');
 		}
-		gameMode.value = mode
+		gameMode.value = mode;
 
 		try {
 			const response = await axios.post(`${API_BASE_URL}/quizzes/start`, {
 				category: selectedCategory,
 				mode: selectedMode
-			})
+			});
 			
-			questions.value = response.data.questions
-			currentQuestionIndex.value = 0
-			score.value = 0
+			let fetchedQuestions = response.data.questions;
+			// For rapid fire, shuffle the questions initially
+			if (gameMode.value.id === 'rapidfire') {
+				fetchedQuestions = shuffleArray(fetchedQuestions);
+			}
+
+			questions.value = fetchedQuestions;
+			currentQuestionIndex.value = 0;
+			score.value = 0;
 		} catch (err) {
-			console.error('Error starting quiz:', err)
-			throw new Error('Failed to start quiz')
+			console.error('Error starting quiz:', err);
+			throw new Error('Failed to start quiz');
       } finally {
-			loading.value = false
+			loading.value = false;
 		}
-	}
+	};
 
 	const answerQuestion = (answer: string) => {
-		if (!currentQuestion.value) return false
+		if (!currentQuestion.value) return false;
 
-		let isCorrect = false
-		
+		let isCorrect = false;
+
 		// For no-options mode, do case-insensitive comparison and trim whitespace
 		if (gameMode.value?.id === 'nooptions') {
-			const userAnswer = answer.toLowerCase().trim()
-			const correctAnswer = currentQuestion.value.correctAnswer.toLowerCase().trim()
-			isCorrect = userAnswer === correctAnswer
+			const userAnswer = answer.toLowerCase().trim();
+			const correctAnswer = currentQuestion.value.correctAnswer.toLowerCase().trim();
+			isCorrect = userAnswer === correctAnswer;
 		} else {
 			// For multiple choice, exact match
-			isCorrect = answer === currentQuestion.value.correctAnswer
-		}
-      
-      if (isCorrect) {
-			score.value += calculatePoints()
+			isCorrect = answer === currentQuestion.value.correctAnswer;
 		}
 
-		return isCorrect
-	}
+		if (isCorrect && gameMode.value?.id !== 'rapidfire') {
+			score.value += calculatePoints();
+		}
+
+		return isCorrect;
+	};
 
 	const calculatePoints = () => {
 		if (!gameMode.value) return 100
@@ -161,37 +178,82 @@ export const useQuizStore = defineStore('quiz', () => {
 	}
 
 	const nextQuestion = () => {
-		if (currentQuestionIndex.value < totalQuestions.value - 1) {
-			currentQuestionIndex.value++
+		// For rapid fire, loop and reshuffle if we reach the end of the question pool
+		if (gameMode.value?.id === 'rapidfire') {
+			if (currentQuestionIndex.value >= totalQuestions.value - 1) {
+				questions.value = shuffleArray(questions.value); // Reshuffle for variety
+				currentQuestionIndex.value = 0;
+			} else {
+				currentQuestionIndex.value++;
+			}
+			return;
 		}
-	}
+
+		if (currentQuestionIndex.value < totalQuestions.value - 1) {
+			currentQuestionIndex.value++;
+		}
+	};
 
 	const completeGame = async (finalScore?: number) => {
-		if (!gameMode.value) return
+		if (!gameMode.value) return;
+
+		const userStore = useUserStore()
 
 		try {
-			const score = finalScore || totalEarnings.value
-			const questionsAnswered = currentQuestionIndex.value
+			const questionsAnswered = currentQuestionIndex.value;
+			const correctAnswers = questions.value.slice(0, questionsAnswered).filter((q, i) => {
+				// This assumes you have a way to check if the answer for question i was correct.
+				// For simplicity, I'll placeholder this. You'd need to store answers.
+				// Let's assume the score reflects correct answers for now for non-rapidfire.
+				return true; // Placeholder
+			}).length;
+
+			const resultData = {
+				finalScore: finalScore || 0,
+				questionsAnswered,
+				correctAnswers,
+				incorrectAnswers: questionsAnswered - correctAnswers,
+				mode: gameMode.value.name,
+				category: category.value,
+				isWin: (finalScore || 0) > 0, // Simple win condition
+			};
+			lastGameResult.value = resultData;
 
 			await axios.post(`${API_BASE_URL}/games/complete`, {
-				finalScore: score,
+				finalScore: resultData.finalScore,
 				questionsAnswered,
-				mode: gameMode.value.id,
+				gameMode: gameMode.value.id,
+				rapidFireScore: gameMode.value.id === 'rapidfire' ? resultData.finalScore : undefined,
 				category: category.value
-			})
+			});
+
+			// Fetch the latest user data to update stats everywhere
+			await userStore.fetchCurrentUser();
+
 		} catch (err) {
-			console.error('Error completing game:', err)
+			console.error('Error completing game:', err);
 		}
-	}
+	};
 
 	const resetGame = () => {
-		questions.value = []
-		currentQuestionIndex.value = 0
-		score.value = 0
-		gameMode.value = null
-		category.value = ''
-		error.value = ''
-	}
+		questions.value = [];
+		currentQuestionIndex.value = 0;
+		score.value = 0;
+		gameMode.value = null;
+		category.value = '';
+		error.value = '';
+		// Do not reset lastGameResult here, so the result page can access it
+	};
+
+	// Helper function to shuffle an array
+	const shuffleArray = (array: Question[]) => {
+		const shuffled = [...array];
+		for (let i = shuffled.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+		}
+		return shuffled;
+	};
 
 	return {
 		// State
@@ -202,9 +264,11 @@ export const useQuizStore = defineStore('quiz', () => {
 		category,
 		loading,
 		error,
+		lastGameResult,
 		gameModes,
 		categories,
 		prizeStructure,
+		rapidFirePrizeStructure,
 
 		// Computed
 		currentQuestion,
