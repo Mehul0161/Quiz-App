@@ -13,33 +13,7 @@ const PORT = process.env.PORT || 3000;
 const geminiService = new GeminiService();
 
 // Middleware
-// Permissive CORS: allow all origins (no credentials). Safe for public JSON APIs
-const corsOptions = {
-  origin: true, // reflect request origin or '*' when no origin
-  credentials: false, // required for '*' compatibility
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-};
-
-app.use(cors(corsOptions));
-// Ensure all responses include CORS headers
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  next();
-});
-// Handle preflight without wildcard route patterns to avoid path-to-regexp errors
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    res.header('Access-Control-Max-Age', '86400');
-    return res.sendStatus(204);
-  }
-  next();
-});
+app.use(cors()); // Enables CORS for all origins
 app.use(express.json());
 
 // Request logging middleware
