@@ -56,7 +56,7 @@ const router = createRouter({
 })
 
 // Route guard for authentication
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('quiz_token')
   
   if (to.meta.requiresAuth && !token) {

@@ -217,15 +217,7 @@ const gameModes = [
 
 const categories = computed(() => quizStore.categories)
 
-const getDifficultyColor = (difficulty: string) => {
-	switch (difficulty) {
-		case 'Easy': return 'text-green-400'
-		case 'Medium': return 'text-yellow-400'
-		case 'Hard': return 'text-orange-400'
-		case 'Very Hard': return 'text-red-400'
-		default: return 'text-neutral-400'
-	}
-}
+
 
 const getDifficultyBadgeClass = (difficulty: string) => {
 	switch (difficulty) {

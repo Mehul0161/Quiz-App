@@ -110,9 +110,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import axios from 'axios';
 import { useUserStore } from '../stores/user';
-import { API_BASE_URL } from '../config';
 import LoadingSpinner from './LoadingSpinner.vue'; // Assuming you have this component
 
 const userStore = useUserStore();
@@ -135,8 +133,9 @@ const fetchUserStats = async () => {
   }
 };
 
-const getGameModeIcon = (mode: string) => {
-  switch(mode) {
+const getGameModeIcon = (mode: string | number) => {
+  const modeStr = String(mode);
+  switch(modeStr) {
     case 'normal': return '🧠';
     case 'rapidfire': return '🔥';
     case 'nooptions': return '✍️';
@@ -145,13 +144,14 @@ const getGameModeIcon = (mode: string) => {
   }
 };
 
-const getModeName = (mode: string) => {
-  switch(mode) {
+const getModeName = (mode: string | number) => {
+  const modeStr = String(mode);
+  switch(modeStr) {
     case 'normal': return 'Normal Mode';
     case 'rapidfire': return 'Rapid Fire';
     case 'nooptions': return 'Without Options';
     case 'imagebased': return 'Image Based';
-    default: return mode;
+    default: return modeStr;
   }
 };
 

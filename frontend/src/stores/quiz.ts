@@ -18,6 +18,12 @@ export interface Question {
 	difficulty: string
 	explanation?: string
 	imageUrl?: string
+	imageQuery?: string
+	lifelines?: {
+		'50-50'?: string[]
+		audience?: Record<string, string>
+		friend?: string
+	}
 }
 
 export interface GameMode {
@@ -203,7 +209,7 @@ export const useQuizStore = defineStore('quiz', () => {
 
 		try {
 			const questionsAnswered = currentQuestionIndex.value;
-			const correctAnswers = questions.value.slice(0, questionsAnswered).filter((q, i) => {
+			            const correctAnswers = questions.value.slice(0, questionsAnswered).filter(() => {
 				// This assumes you have a way to check if the answer for question i was correct.
 				// For simplicity, I'll placeholder this. You'd need to store answers.
 				// Let's assume the score reflects correct answers for now for non-rapidfire.

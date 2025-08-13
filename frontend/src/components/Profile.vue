@@ -29,10 +29,10 @@
 								<span class="px-3 py-1 bg-purple-600/20 border border-purple-500/30 rounded text-purple-300 text-sm font-semibold">
 									🎮 Quiz Player
 								</span>
-								<span v-if="userStore.currentUser?.totalEarnings >= 1000000" class="px-3 py-1 bg-yellow-600/20 border border-yellow-500/30 rounded text-yellow-300 text-sm font-semibold">
+								<span v-if="(userStore.currentUser?.totalEarnings || 0) >= 1000000" class="px-3 py-1 bg-yellow-600/20 border border-yellow-500/30 rounded text-yellow-300 text-sm font-semibold">
 									👑 Millionaire
 								</span>
-								<span v-else-if="userStore.currentUser?.totalEarnings >= 100000" class="px-3 py-1 bg-blue-600/20 border border-blue-500/30 rounded text-blue-300 text-sm font-semibold">
+								<span v-else-if="(userStore.currentUser?.totalEarnings || 0) >= 100000" class="px-3 py-1 bg-blue-600/20 border border-blue-500/30 rounded text-blue-300 text-sm font-semibold">
 									⭐ Elite Player
 								</span>
             </div>
@@ -93,21 +93,21 @@
 					<div class="card">
 						<h3 class="text-lg font-bold text-white mb-4 text-center">Recent Achievements</h3>
 						<div class="space-y-2">
-							<div v-if="userStore.currentUser?.totalEarnings >= 1000000" class="flex items-center gap-3 p-3 bg-yellow-600/20 border border-yellow-500/30 rounded">
+							<div v-if="(userStore.currentUser?.totalEarnings || 0) >= 1000000" class="flex items-center gap-3 p-3 bg-yellow-600/20 border border-yellow-500/30 rounded">
 								<div class="text-xl">👑</div>
 								<div>
 									<div class="font-bold text-yellow-300 text-sm">Millionaire!</div>
 									<div class="text-xs text-yellow-200">Reached $1,000,000 in earnings</div>
 								</div>
                 </div>
-							<div v-if="userStore.currentUser?.gamesPlayed >= 10" class="flex items-center gap-3 p-3 bg-blue-600/20 border border-blue-500/30 rounded">
+							<div v-if="(userStore.currentUser?.gamesPlayed || 0) >= 10" class="flex items-center gap-3 p-3 bg-blue-600/20 border border-blue-500/30 rounded">
 								<div class="text-xl">🎯</div>
 								<div>
 									<div class="font-bold text-blue-300 text-sm">Veteran Player</div>
 									<div class="text-xs text-blue-200">Played 10+ games</div>
                     </div>
                   </div>
-							<div v-if="userStore.currentUser?.highestScore >= 100000" class="flex items-center gap-3 p-3 bg-green-600/20 border border-green-500/30 rounded">
+							<div v-if="(userStore.currentUser?.highestScore || 0) >= 100000" class="flex items-center gap-3 p-3 bg-green-600/20 border border-green-500/30 rounded">
 								<div class="text-xl">⭐</div>
 								<div>
 									<div class="font-bold text-green-300 text-sm">High Roller</div>

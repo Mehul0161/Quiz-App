@@ -12,6 +12,7 @@ export interface User {
   highestScore?: number
   createdAt: string
   gameHistory: any[]
+  stats?: Record<string, any>
 }
 
 export const useUserStore = defineStore('user', () => {

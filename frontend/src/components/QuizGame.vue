@@ -235,7 +235,7 @@ const provisionalAnswer = ref('')
 const lastClickTime = ref(0)
 const DOUBLE_CLICK_DELAY = 500 // 500ms
 
-let timer: NodeJS.Timeout | null = null
+let timer: ReturnType<typeof setInterval> | null = null
 
 const currentQuestionIndex = computed(() => quizStore.currentQuestionIndex)
 const totalQuestions = computed(() => quizStore.totalQuestions)
