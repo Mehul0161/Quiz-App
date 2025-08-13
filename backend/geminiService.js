@@ -791,6 +791,63 @@ class GeminiService {
         
         return finalQuestions;
     }
+
+    // Generate image-based questions with image search query
+    async generateImageQuestions(category) {
+        const prompt = `
+            Generate a "Who Wants to Be a Millionaire" style quiz with 15 questions for the category: "${category}".
+            Each question must include:
+            - question_number: "1" to "15" (as string)
+            - question: The question text
+            - options: A-D choices
+            - correct_answer: one of A|B|C|D
+            - difficulty_level: easy|medium|hard|very hard
+            - explanation: short explanation
+            - image_search_query: 1-3 word, concise noun phrase to search an image (lowercase, no punctuation). Example: "eiffel tower", "football", "mona lisa".
+
+            The response MUST be a single valid JSON object with this shape:
+            {
+              "content": {
+                "questions": [ { ...15 items as specified... } ]
+              }
+            }
+
+            Progressive difficulty: 1-4 easy, 5-8 medium, 9-12 hard, 13-15 very hard.
+            Ensure queries are directly imageable on stock photo sites.
+        `;
+
+        try {
+            const result = await this.model.generateContent(prompt);
+            const response = await result.response;
+            let text = response.text().trim();
+
+            if (text.startsWith('```json')) {
+                text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+            } else if (text.startsWith('```')) {
+                text = text.replace(/^```\s*/, '').replace(/\s*```$/, '');
+            }
+
+            const parsedJson = JSON.parse(text);
+            if (!parsedJson.content || !parsedJson.content.questions || parsedJson.content.questions.length !== 15) {
+                throw new Error('Invalid image questions format');
+            }
+            return parsedJson;
+        } catch (error) {
+            console.error('Error generating image questions:', error.message);
+            // Minimal fallback: fabricate simple queries
+            const prizeStructure = [100,200,300,500,1000,2000,4000,8000,16000,32000,64000,125000,250000,500000,1000000];
+            const qs = Array.from({length:15}).map((_, i) => ({
+                question_number: (i+1).toString(),
+                question: `Identify the object shown related to ${category}.`,
+                options: { A: 'Option A', B: 'Option B', C: 'Option C', D: 'Option D' },
+                correct_answer: 'A',
+                difficulty_level: i<4?'easy':i<8?'medium':i<12?'hard':'very hard',
+                explanation: `Representative image for ${category}.`,
+                image_search_query: `${category}`.toLowerCase()
+            }));
+            return { content: { questions: qs } };
+        }
+    }
 }
 
 module.exports = GeminiService;

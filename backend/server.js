@@ -531,7 +531,7 @@ app.post('/api/quizzes/start', async (req, res) => {
 				questions = await generateNoOptionsQuestions(category)
 				break
 			case 'imagebased':
-				questions = generateImageBasedQuestions(category) // Keep as dummy for now
+				questions = await generateImageBasedQuestionsAI(category)
 				break
 			default:
 				return res.status(400).json({ error: 'Invalid game mode' })
@@ -679,22 +679,23 @@ async function generateNoOptionsQuestions(category) {
 				"questions": [
 				  {
 					"question": "Question text that can be answered with a short text response",
-					"correct_answer": "The exact correct answer",
+					"correct_answer": "The exact correct answer (one or two words max, lowercase)",
+					"acceptable_answers": ["list", "of", "short", "synonyms"],
 					"difficulty_level": "easy|medium|hard|very hard",
-					"explanation": "Brief explanation of the answer"
+					"explanation": "Brief explanation of the answer (short)"
 				  }
 				]
 			  }
 			}
 
-			Requirements:
-			1. Questions should have clear, unambiguous answers
-			2. Answers should be short (1-3 words typically)
-			3. Progressive difficulty: questions 1-4 easy, 5-8 medium, 9-12 hard, 13-15 very hard
-			4. Focus on factual knowledge that has definitive answers
-			5. Avoid questions that could have multiple correct interpretations
+			Strict requirements:
+			1. Answers must be one or two words only. No sentences. Prefer single words when possible.
+			2. Provide 1-5 acceptable_answers that are short synonyms/variants (all lowercase, no punctuation).
+			3. Progressive difficulty: 1-4 easy, 5-8 medium, 9-12 hard, 13-15 very hard
+			4. Focus on factual prompts that naturally yield short answers (names, single terms, places).
+			5. Ensure the entire output is a single, clean JSON object with no markdown code fences.
 		`
-
+		
 		const result = await geminiService.model.generateContent(prompt)
 		const response = await result.response
 		let text = response.text().trim()
@@ -718,6 +719,7 @@ async function generateNoOptionsQuestions(category) {
 				question: q.question,
 				options: null, // No options for this mode
 				correctAnswer: q.correct_answer,
+				acceptableAnswers: Array.isArray(q.acceptable_answers) ? q.acceptable_answers : [],
 				difficulty: q.difficulty_level,
 				explanation: q.explanation,
 				category: category,
@@ -767,6 +769,35 @@ function generateFallbackQuestionsNoOptions(category) {
 	}
 	
 	return questions
+}
+
+// Generate image-based questions via AI with search query
+async function generateImageBasedQuestionsAI(category) {
+	try {
+		const ai = await geminiService.generateImageQuestions(category)
+		if (ai && ai.content && Array.isArray(ai.content.questions)) {
+			const transformed = ai.content.questions.map((q, index) => {
+				const query = q.image_search_query || q.imageSearchQuery || q.image_query || q.search_query || q.searchQuery || q.query || q.image || ''
+				return ({
+					id: `img_${Date.now()}_${index}`,
+					question: q.question,
+					options: q.options,
+					correctAnswer: q.correct_answer,
+					difficulty: q.difficulty_level,
+					explanation: q.explanation,
+					category,
+					questionNumber: index + 1,
+					prizeValue: PRIZE_STRUCTURE[index],
+					imageQuery: String(query || category).toLowerCase()
+				})
+			})
+			return transformed
+		}
+		throw new Error('Invalid image AI response')
+	} catch (e) {
+		console.error('Image mode generation failed, using simple fallback')
+		return generateImageBasedQuestions(category)
+	}
 }
 
 // Generate image-based questions
@@ -1157,6 +1188,51 @@ async function startServer() {
 if (!process.env.VERCEL) {
 startServer().catch(console.error);
 }
+
+// Image lookup (Pixabay) and redirect to a usable image URL
+app.get('/api/images/lookup', async (req, res) => {
+    try {
+        const query = (req.query.query || req.query.q || '').toString().trim()
+        if (!query) return res.status(400).json({ error: 'query is required' })
+
+        const apiKey = process.env.PIXABAY_API_KEY
+        let imageUrl = ''
+        if (apiKey) {
+            const url = `https://pixabay.com/api/?key=${apiKey}&q=${encodeURIComponent(query)}&image_type=photo&per_page=10&safesearch=true&orientation=horizontal`
+            const resp = await fetch(url)
+            if (!resp.ok) throw new Error(`Pixabay HTTP ${resp.status}`)
+            const data = await resp.json()
+            const hit = (data.hits && data.hits[0]) || null
+            imageUrl = hit?.largeImageURL || hit?.webformatURL || ''
+        }
+
+        if (!imageUrl) {
+            imageUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(query)}`
+        }
+
+        // Stream the image back to avoid redirect issues in some environments
+        const imgResp = await fetch(imageUrl)
+        if (!imgResp.ok) throw new Error(`Image fetch failed ${imgResp.status}`)
+        const contentType = imgResp.headers.get('content-type') || 'image/jpeg'
+        const buffer = Buffer.from(await imgResp.arrayBuffer())
+        res.set('Content-Type', contentType)
+        res.set('Cache-Control', 'public, max-age=86400')
+        return res.send(buffer)
+    } catch (e) {
+        console.error('Image lookup failed:', e.message)
+        try {
+            const fallback = `https://source.unsplash.com/800x600/?${encodeURIComponent(req.query.query || req.query.q || 'random')}`
+            const imgResp = await fetch(fallback)
+            const contentType = imgResp.headers.get('content-type') || 'image/jpeg'
+            const buffer = Buffer.from(await imgResp.arrayBuffer())
+            res.set('Content-Type', contentType)
+            res.set('Cache-Control', 'public, max-age=3600')
+            return res.send(buffer)
+        } catch (nestedErr) {
+            return res.status(500).json({ error: 'Image fetch error', details: nestedErr.message })
+        }
+    }
+})
 
 // Error handling middleware
 app.use((err, req, res, next) => {

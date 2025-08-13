@@ -64,7 +64,7 @@ export const useQuizStore = defineStore('quiz', () => {
 			id: 'imagebased',
 			name: 'Image Based',
 			timeLimit: 40,
-			lifelines: 2,
+			lifelines: 0,
 			scoring: 'visual'
 		}
 	]
@@ -144,9 +144,11 @@ export const useQuizStore = defineStore('quiz', () => {
 
 		// For no-options mode, do case-insensitive comparison and trim whitespace
 		if (gameMode.value?.id === 'nooptions') {
-			const userAnswer = answer.toLowerCase().trim();
-			const correctAnswer = currentQuestion.value.correctAnswer.toLowerCase().trim();
-			isCorrect = userAnswer === correctAnswer;
+			const normalize = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]/g, '')
+			const userAnswer = normalize(answer)
+			const correctAnswer = normalize((currentQuestion.value as any).correctAnswer || '')
+			const acceptable = ((currentQuestion.value as any).acceptableAnswers || []).map((a: string) => normalize(a))
+			isCorrect = userAnswer === correctAnswer || acceptable.includes(userAnswer)
 		} else {
 			// For multiple choice, exact match
 			isCorrect = answer === currentQuestion.value.correctAnswer;

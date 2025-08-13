@@ -58,10 +58,10 @@
 							<h2 class="text-xl font-bold text-white mb-4 leading-relaxed">{{ currentQuestion?.question }}</h2>
 
 							<!-- Image for image-based mode -->
-							<div v-if="currentQuestion?.imageUrl && quizStore.gameMode?.id === 'imagebased'" class="mb-6">
+							<div v-if="quizStore.gameMode?.id === 'imagebased'" class="mb-6">
 								<img
-									:src="currentQuestion.imageUrl"
-									:alt="`Question ${currentQuestionIndex + 1}`"
+									:src="getImageUrl((currentQuestion as any)?.imageQuery || quizStore.category)"
+									:alt="(currentQuestion as any)?.imageQuery || quizStore.category"
 									class="w-full max-w-lg mx-auto rounded-xl border-2 border-neutral-600 shadow-lg"
 								/>
 							</div>
@@ -128,7 +128,7 @@
 					</div>
 
 					<!-- Lifelines Card -->
-					<div v-if="quizStore.gameMode?.lifelines && quizStore.gameMode.lifelines > 0" class="card p-4 shadow-lg border-2 border-neutral-700">
+					<div v-if="quizStore.gameMode?.lifelines && quizStore.gameMode.lifelines > 0 && quizStore.gameMode?.id === 'normal'" class="card p-4 shadow-lg border-2 border-neutral-700">
 						<h3 class="text-lg font-bold text-white mb-4 text-center">Lifelines</h3>
 						<div class="grid grid-cols-3 gap-2 md:gap-3">
 							<button
@@ -213,6 +213,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuizStore } from '../stores/quiz'
+import { API_BASE_URL } from '../config'
 
 const router = useRouter()
 const quizStore = useQuizStore()
@@ -616,4 +617,7 @@ const apply5050Lifeline = () => {
 	const optionsToHide = question.lifelines['50-50']
 	hiddenOptions.value = [...optionsToHide]
 }
+
+// Build image URL via backend API so it works in dev/prod
+const getImageUrl = (query: string) => `${API_BASE_URL}/images/lookup?query=${encodeURIComponent(query)}`
 </script>
