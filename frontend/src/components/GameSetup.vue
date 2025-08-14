@@ -106,6 +106,15 @@
 								<li>Progressive difficulty</li>
 							</ul>
 						</div>
+						<div v-else-if="selectedMode === 'imagebased'">
+							<p><strong>🖼️ Image Based Mode:</strong> Questions based on images and visual content.</p>
+							<ul class="list-disc list-inside ml-3 space-y-1">
+								<li>Visual recognition skills</li>
+								<li>2 lifelines available</li>
+								<li>Mixed question types</li>
+								<li>Progressive difficulty</li>
+							</ul>
+						</div>
 					</div>
 				</div>
 
@@ -121,15 +130,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
-import { useQuizStore } from '../stores/quiz'
-import LoadingSpinner from './LoadingSpinner.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
-const quizStore = useQuizStore()
 
 const selectedMode = ref('')
 const selectedCategory = ref('')
@@ -142,86 +148,85 @@ const gameModes = [
 		name: 'Normal Mode',
 		description: 'Classic quiz experience with lifelines and standard timing',
 		icon: '🎯',
-		difficulty: 'Medium'
+		difficulty: 'medium'
 	},
 	{
 		id: 'rapidfire',
 		name: 'Rapid Fire',
 		description: 'Fast-paced questions with time pressure and no lifelines',
 		icon: '⚡',
-		difficulty: 'Hard'
+		difficulty: 'hard'
 	},
 	{
 		id: 'nooptions',
 		name: 'Without Options',
 		description: 'Type your answers without multiple choice options',
 		icon: '❓',
-		difficulty: 'Very Hard'
+		difficulty: 'very hard'
 	},
 	{
 		id: 'imagebased',
 		name: 'Image Based',
 		description: 'Visual questions based on images and visual content',
 		icon: '🖼️',
-		difficulty: 'Hard'
+		difficulty: 'hard'
 	}
 ]
 
-const categories = computed(() => quizStore.categories)
-
+const categories = [
+	'General Knowledge',
+	'Science',
+	'History',
+	'Geography',
+	'Entertainment',
+	'Sports',
+	'Technology',
+	'Art',
+	'Music',
+	'Literature'
+]
 
 
 const getDifficultyBadgeClass = (difficulty: string) => {
-	switch (difficulty) {
-		case 'Easy': return 'bg-green-500/20 text-green-300 border border-green-500/30'
-		case 'Medium': return 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
-		case 'Hard': return 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
-		case 'Very Hard': return 'bg-red-500/20 text-red-300 border border-red-500/30'
-		default: return 'bg-neutral-500/20 text-neutral-300 border border-neutral-500/30'
+	switch (difficulty.toLowerCase()) {
+		case 'easy':
+			return 'bg-green-600/20 text-green-300 border-green-500/30'
+		case 'medium':
+			return 'bg-yellow-600/20 text-yellow-300 border-yellow-500/30'
+		case 'hard':
+			return 'bg-red-600/20 text-red-300 border-red-500/30'
+		default:
+			return 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30'
 	}
 }
 
 const getCategoryIcon = (category: string) => {
-	const icons: { [key: string]: string } = {
+	const icons: Record<string, string> = {
+		'General Knowledge': '🧠',
 		'Science': '🔬',
-		'History': '🏛️',
+		'History': '📚',
 		'Geography': '🌍',
+		'Entertainment': '🎬',
 		'Sports': '⚽',
-		'Entertainment': '🎭',
 		'Technology': '💻',
-		'Literature': '📚',
 		'Art': '🎨',
 		'Music': '🎵',
-		'Movies': '🎬',
-		'General Knowledge': '🧠',
-		'Nature': '🌿',
-		'Space': '🚀',
-		'Food': '🍽️',
-		'Animals': '🦁'
+		'Literature': '📖'
 	}
-	return icons[category] || '📖'
-}
-
-const getSelectedModeName = () => {
-	const mode = gameModes.find(m => m.id === selectedMode.value)
-	return mode ? mode.name : 'Game'
+	return icons[category] || '❓'
 }
 
 const startGame = async () => {
-	if (!selectedMode.value || !selectedCategory.value) {
-		error.value = 'Please select both a game mode and category'
-		return
-	}
-
-	loading.value = true
-	error.value = ''
-
+	if (!selectedMode.value || !selectedCategory.value) return
+	
 	try {
-		await quizStore.startQuiz(selectedCategory.value, selectedMode.value)
+		loading.value = true
+		error.value = null
+		
+		// Navigate to game with selected options
 		router.push('/game')
-	} catch (err) {
-		error.value = 'Failed to start game. Please try again.'
-		console.error('Error starting game:', err)
+	} catch (err: any) {
+		error.value = err.response?.data?.error || 'Failed to start game'
 	} finally {
 		loading.value = false
 	}

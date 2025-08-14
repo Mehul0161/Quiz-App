@@ -85,11 +85,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import LoadingSpinner from './LoadingSpinner.vue'
 
-const router = useRouter()
 const userStore = useUserStore()
 
 const username = ref('')

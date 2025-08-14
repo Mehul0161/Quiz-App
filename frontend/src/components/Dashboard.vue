@@ -105,15 +105,6 @@ const getWinRate = () => {
 	return Math.round((wins / userStore.currentUser.gamesPlayed) * 100);
 }
 
-const formatDate = (dateString?: string) => {
-	if (!dateString) return 'Unknown'
-	return new Date(dateString).toLocaleDateString('en-US', {
-		year: 'numeric',
-		month: 'long',
-		day: 'numeric',
-	})
-}
-
 const logout = () => {
 	userStore.logout()
 	router.push('/login')
