@@ -1,45 +1,70 @@
 <template>
   <div class="min-h-screen bg-gray-900">
-    <div class="max-w-6xl mx-auto px-3 py-8">
-      <div class="text-center mb-6">
-        <h1 class="text-3xl font-extrabold text-white mb-1">Global Leaderboard</h1>
-        <p class="text-sm text-gray-400">See how you rank among the best.</p>
+    <div class="max-w-4xl mx-auto px-4 py-6">
+      <div class="text-center mb-4">
+        <h1 class="text-2xl md:text-3xl font-bold text-white mb-1">Global Leaderboard</h1>
+        <p class="text-xs text-gray-400">See how you rank among the best.</p>
       </div>
 
-      <div class="bg-black/20 rounded border border-gray-700 p-5">
-        <div v-if="loading" class="text-center py-12">
-          <div class="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-          <p class="text-gray-400 text-sm">Loading leaderboard...</p>
+      <div class="bg-black/20 rounded border border-gray-700 p-4">
+        <div v-if="loading" class="text-center py-8">
+          <div class="w-6 h-6 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+          <p class="text-gray-400 text-xs">Loading leaderboard...</p>
         </div>
 
-        <div v-else-if="error" class="text-center py-8">
-          <p class="text-red-400 text-sm mb-4">{{ error }}</p>
-          <button @click="loadLeaderboard" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm">Retry</button>
+        <div v-else-if="error" class="text-center py-6">
+          <p class="text-red-400 text-xs mb-3">{{ error }}</p>
+          <button @click="loadLeaderboard" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs">Retry</button>
         </div>
 
-        <div v-else-if="leaderboard.length === 0" class="text-center py-8">
-          <p class="text-gray-400 text-sm mb-4">No players yet. Be the first!</p>
-          <router-link to="/setup" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm">Start Playing</router-link>
+        <div v-else-if="leaderboard.length === 0" class="text-center py-6">
+          <p class="text-gray-400 text-xs mb-3">No players yet. Be the first!</p>
+          <router-link to="/setup" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs">Start Playing</router-link>
         </div>
 
         <div v-else class="overflow-x-auto">
-          <table class="w-full text-sm">
+          <!-- Mobile view - cards -->
+          <div class="md:hidden space-y-2">
+            <div v-for="player in leaderboard" :key="player.username" class="bg-gray-800/40 rounded border border-gray-700 p-3">
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-bold text-lg" :class="getRankColor(player.rank)">#{{ player.rank }}</span>
+                <span class="font-semibold text-white text-sm">{{ player.username }}</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2 text-xs">
+                <div class="text-center">
+                  <div class="text-gray-400">Earnings</div>
+                  <div class="font-bold text-indigo-300">${{ player.totalEarnings.toLocaleString() }}</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-gray-400">Games</div>
+                  <div class="font-semibold text-gray-300">{{ player.gamesPlayed }}</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-gray-400">Best</div>
+                  <div class="font-semibold text-green-300">${{ player.highestScore.toLocaleString() }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Desktop view - table -->
+          <table class="hidden md:table w-full text-xs">
             <thead class="border-b border-gray-700">
               <tr class="text-gray-400">
-                <th class="px-4 py-3 text-left font-bold">Rank</th>
-                <th class="px-4 py-3 text-left font-bold">Player</th>
-                <th class="px-4 py-3 text-right font-bold">Total Earnings</th>
-                <th class="px-4 py-3 text-right font-bold">Games</th>
-                <th class="px-4 py-3 text-right font-bold">Best Score</th>
+                <th class="px-3 py-2 text-left font-bold">Rank</th>
+                <th class="px-3 py-2 text-left font-bold">Player</th>
+                <th class="px-3 py-2 text-right font-bold">Total Earnings</th>
+                <th class="px-3 py-2 text-right font-bold">Games</th>
+                <th class="px-3 py-2 text-right font-bold">Best Score</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="player in leaderboard" :key="player.username" class="border-b border-gray-800 hover:bg-gray-800/40">
-                <td class="px-4 py-3 font-extrabold" :class="getRankColor(player.rank)">#{{ player.rank }}</td>
-                <td class="px-4 py-3 font-semibold text-white">{{ player.username }}</td>
-                <td class="px-4 py-3 text-right font-bold text-indigo-300">${{ player.totalEarnings.toLocaleString() }}</td>
-                <td class="px-4 py-3 text-right text-gray-300 font-semibold">{{ player.gamesPlayed }}</td>
-                <td class="px-4 py-3 text-right text-green-300 font-semibold">${{ player.highestScore.toLocaleString() }}</td>
+                <td class="px-3 py-2 font-bold" :class="getRankColor(player.rank)">#{{ player.rank }}</td>
+                <td class="px-3 py-2 font-semibold text-white">{{ player.username }}</td>
+                <td class="px-3 py-2 text-right font-bold text-indigo-300">${{ player.totalEarnings.toLocaleString() }}</td>
+                <td class="px-3 py-2 text-right text-gray-300 font-semibold">{{ player.gamesPlayed }}</td>
+                <td class="px-3 py-2 text-right text-green-300 font-semibold">${{ player.highestScore.toLocaleString() }}</td>
               </tr>
             </tbody>
           </table>

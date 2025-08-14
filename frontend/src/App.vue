@@ -7,14 +7,14 @@ const route = useRoute()
 <template>
   <div class="bg-gray-900 text-white min-h-screen">
     <header v-if="route.path !== '/game'" class="bg-black/20 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-10">
-      <nav class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-16">
+      <nav class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-12">
           <div class="flex items-center">
-            <router-link to="/" class="font-bold text-xl text-white hover:text-indigo-300 transition-colors">QuizMillionaire</router-link>
+            <router-link to="/" class="font-bold text-lg text-white hover:text-indigo-300 transition-colors">QuizMillionaire</router-link>
           </div>
-          <div class="flex items-center space-x-4">
-            <router-link to="/leaderboard" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Leaderboard</router-link>
-            <router-link to="/profile" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Profile</router-link>
+          <div class="flex items-center space-x-3">
+            <router-link to="/leaderboard" class="text-gray-300 hover:text-white px-2 py-1 rounded text-xs font-medium transition-colors">Leaderboard</router-link>
+            <router-link to="/profile" class="text-gray-300 hover:text-white px-2 py-1 rounded text-xs font-medium transition-colors">Profile</router-link>
           </div>
         </div>
       </nav>

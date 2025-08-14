@@ -2,60 +2,60 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
-/* Import futuristic fonts */
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap');
+/* Import clean, simple fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* Basic styles */
-  body {
-  @apply bg-neutral-950 text-neutral-200;
+body {
+  @apply bg-neutral-950 text-neutral-200 font-sans;
 }
 
-/* Base card style */
+/* Base card style - smaller and simpler */
 .card {
-  @apply bg-neutral-900/95 backdrop-blur-sm rounded-xl border border-neutral-700 p-6 shadow-xl;
+  @apply bg-neutral-900/90 backdrop-blur-sm rounded-lg border border-neutral-700 p-4 shadow-md;
 }
 
-/* Compact card style */
+/* Compact card style - even smaller */
 .card-compact {
-  @apply bg-neutral-900/95 backdrop-blur-sm rounded-xl border border-neutral-700 p-4 shadow-lg;
+  @apply bg-neutral-900/90 backdrop-blur-sm rounded-lg border border-neutral-700 p-3 shadow-sm;
 }
 
-/* Primary button style */
+/* Primary button style - smaller and simpler */
 .btn-primary {
-  @apply bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold py-2 px-4 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-indigo-500/25 hover:scale-105 transform;
+  @apply bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm;
 }
 
-/* Secondary button style */
+/* Secondary button style - smaller and simpler */
 .btn-secondary {
-  @apply bg-gradient-to-r from-neutral-700 to-neutral-800 hover:from-neutral-600 hover:to-neutral-700 text-white font-semibold py-2 px-4 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-neutral-500/25 hover:scale-105 transform;
+  @apply bg-neutral-700 hover:bg-neutral-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm;
 }
 
-/* Input field style */
+/* Input field style - smaller and simpler */
 .input-field {
-  @apply w-full px-4 py-3 bg-neutral-800/80 backdrop-blur-sm border-2 border-neutral-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white placeholder-neutral-400 transition-all duration-300 shadow-inner;
+  @apply w-full px-3 py-2 bg-neutral-800/80 backdrop-blur-sm border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-white placeholder-neutral-400 transition-colors duration-200 text-sm;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - smaller */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  @apply bg-neutral-800/50 rounded-lg;
+  @apply bg-neutral-800/50 rounded;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-gradient-to-b from-neutral-600 to-neutral-700 rounded-lg border border-neutral-600;
+  @apply bg-neutral-600 rounded border border-neutral-600;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  @apply from-neutral-500 to-neutral-600;
+  @apply bg-neutral-500;
 }
 
-/* Page transition */
+/* Page transition - faster */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.15s ease;
 }
 
 .fade-enter-from,
@@ -63,54 +63,75 @@
   opacity: 0;
 }
 
-/* Animations and effects */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes glow {
-  0%, 100% { box-shadow: 0 0 5px rgba(99, 102, 241, 0.5); }
-  50% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.8); }
-}
-
-.animate-glow {
-  animation: glow 2s ease-in-out infinite;
-}
-
-/* Hover effects */
+/* Simple hover effects */
 .hover-lift {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.2s ease;
 }
 
 .hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
 }
 
-/* Glass morphism effect */
-.glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+/* Responsive text utilities */
+.text-responsive-xs {
+  @apply text-xs sm:text-sm;
 }
 
-/* Remove old styles no longer used */
-.prize-ladder-current, .prize-ladder-safe, .prize-ladder-default, .animate-pulse-glow, .focus-ring {
-  /* These classes are no longer used with the new design */
+.text-responsive-sm {
+  @apply text-sm sm:text-base;
+}
+
+.text-responsive-base {
+  @apply text-base sm:text-lg;
+}
+
+.text-responsive-lg {
+  @apply text-lg sm:text-xl;
+}
+
+.text-responsive-xl {
+  @apply text-xl sm:text-2xl;
+}
+
+.text-responsive-2xl {
+  @apply text-2xl sm:text-3xl;
+}
+
+/* Responsive spacing utilities */
+.space-responsive-sm {
+  @apply space-y-2 sm:space-y-3;
+}
+
+.space-responsive-md {
+  @apply space-y-3 sm:space-y-4;
+}
+
+.space-responsive-lg {
+  @apply space-y-4 sm:space-y-6;
+}
+
+/* Responsive padding utilities */
+.p-responsive-sm {
+  @apply p-2 sm:p-3;
+}
+
+.p-responsive-md {
+  @apply p-3 sm:p-4;
+}
+
+.p-responsive-lg {
+  @apply p-4 sm:p-6;
+}
+
+/* Responsive margin utilities */
+.m-responsive-sm {
+  @apply m-2 sm:m-3;
+}
+
+.m-responsive-md {
+  @apply m-3 sm:m-4;
+}
+
+.m-responsive-lg {
+  @apply m-4 sm:m-6;
 }

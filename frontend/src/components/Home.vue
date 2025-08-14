@@ -1,34 +1,31 @@
 <template>
 	<div class="min-h-screen bg-neutral-950">
 		<!-- Hero -->
-		<div class="relative max-w-4xl mx-auto px-4 pt-12 pb-8 text-center">
-			<h1 class="text-4xl md:text-5xl font-bold text-white mb-3">Who Wants to Be a Millionaire?</h1>
-			<p class="text-base md:text-lg text-neutral-400 mb-6">Create your account, learn the rules, and start your journey.</p>
-			<div v-if="userStore.isLoggedIn" class="mb-4">
-				<router-link to="/dashboard" class="btn-primary">Go to Dashboard</router-link>
-			</div>
+		<div class="relative max-w-3xl mx-auto px-4 pt-8 pb-6 text-center">
+			<h1 class="text-2xl md:text-3xl font-bold text-white mb-2">Who Wants to Be a Millionaire?</h1>
+			<p class="text-sm md:text-base text-neutral-400 mb-4">Create your account, learn the rules, and start your journey.</p>
 		</div>
 
 		<!-- Auth + Rules -->
-		<div class="max-w-4xl mx-auto px-4 pb-12 grid grid-cols-1 lg:grid-cols-2 gap-6">
+		<div class="max-w-3xl mx-auto px-4 pb-8 grid grid-cols-1 lg:grid-cols-2 gap-4">
 			<div class="card">
-				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-xl font-bold text-white">Get Started</h2>
-					<button @click="toggleMode" class="text-sm text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
+				<div class="flex items-center justify-between mb-3">
+					<h2 class="text-lg font-bold text-white">Get Started</h2>
+					<button @click="toggleMode" class="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
 						{{ isRegistering ? 'Have an account? Sign in' : 'New here? Create an account' }}
 					</button>
 				</div>
-				<form @submit.prevent="handleSubmit" class="space-y-4">
+				<form @submit.prevent="handleSubmit" class="space-y-3">
 					<div v-if="isRegistering">
-						<label class="block text-sm font-medium text-neutral-200 mb-2">Username</label>
+						<label class="block text-xs font-medium text-neutral-200 mb-1">Username</label>
 						<input v-model="username" type="text" required class="input-field" placeholder="Choose a unique username" />
 					</div>
 					<div>
-						<label class="block text-sm font-medium text-neutral-200 mb-2">Email</label>
+						<label class="block text-xs font-medium text-neutral-200 mb-1">Email</label>
 						<input v-model="email" type="email" required class="input-field" placeholder="Enter your email" />
 					</div>
 					<div>
-						<label class="block text-sm font-medium text-neutral-200 mb-2">Password</label>
+						<label class="block text-xs font-medium text-neutral-200 mb-1">Password</label>
 						<input v-model="password" type="password" required class="input-field" placeholder="Enter your password" />
 					</div>
 					<button type="submit" :disabled="userStore.loading" class="btn-primary w-full">
@@ -36,26 +33,26 @@
 						<span v-else>{{ isRegistering ? 'Create Account' : 'Sign In' }}</span>
 					</button>
 				</form>
-				<div v-if="userStore.error" class="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded text-center text-red-300 text-sm">
+				<div v-if="userStore.error" class="mt-3 p-2 bg-red-500/10 border border-red-500/30 rounded text-center text-red-300 text-xs">
 					{{ userStore.error }}
 				</div>
 			</div>
 
 			<div class="card">
-				<h2 class="text-xl font-bold text-white mb-3">Rules</h2>
-				<ul class="list-disc list-inside space-y-2 text-neutral-300 text-sm">
+				<h2 class="text-lg font-bold text-white mb-2">Rules</h2>
+				<ul class="list-disc list-inside space-y-1 text-neutral-300 text-xs">
 					<li>15 questions; prize ladder from $100 to $1,000,000.</li>
 					<li>Progressive difficulty: easy → medium → hard → very hard.</li>
 					<li>One-time lifelines: 50:50, Audience, Friend.</li>
 					<li>Walk away anytime to keep winnings.</li>
 				</ul>
-				<h3 class="text-base font-semibold text-white mt-5 mb-3">Categories</h3>
-				<div class="flex flex-wrap gap-2">
+				<h3 class="text-sm font-semibold text-white mt-3 mb-2">Categories</h3>
+				<div class="flex flex-wrap gap-1">
 					<span v-for="c in categories" :key="c" class="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-xs text-neutral-300">{{ c }}</span>
 				</div>
-				<h3 class="text-base font-semibold text-white mt-5 mb-3">Prize Structure</h3>
-				<div class="grid grid-cols-3 md:grid-cols-5 gap-2">
-					<div v-for="(p, i) in prizes" :key="i" class="p-2 text-center bg-neutral-800 border border-neutral-700 rounded text-sm">
+				<h3 class="text-sm font-semibold text-white mt-3 mb-2">Prize Structure</h3>
+				<div class="grid grid-cols-3 md:grid-cols-5 gap-1">
+					<div v-for="(p, i) in prizes" :key="i" class="p-1 text-center bg-neutral-800 border border-neutral-700 rounded text-xs">
 						<span class="font-semibold text-indigo-300">${{ p.toLocaleString() }}</span>
 					</div>
 				</div>
@@ -63,22 +60,22 @@
 		</div>
 
 		<!-- Features -->
-		<div class="max-w-4xl mx-auto px-4 pb-12">
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+		<div class="max-w-3xl mx-auto px-4 pb-8">
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 				<div class="card text-center">
-					<div class="text-4xl mb-3">🤖</div>
-					<h3 class="font-bold text-white text-lg mb-2">AI-Powered</h3>
-					<p class="text-neutral-400 text-sm">Fresh challenges with lifelines included.</p>
+					<div class="text-2xl mb-2">🤖</div>
+					<h3 class="font-bold text-white text-base mb-1">AI-Powered</h3>
+					<p class="text-neutral-400 text-xs">Fresh challenges with lifelines included.</p>
 				</div>
 				<div class="card text-center">
-					<div class="text-4xl mb-3">🏆</div>
-					<h3 class="font-bold text-white text-lg mb-2">Compete</h3>
-					<p class="text-neutral-400 text-sm">Climb the leaderboard.</p>
+					<div class="text-2xl mb-2">🏆</div>
+					<h3 class="font-bold text-white text-base mb-1">Compete</h3>
+					<p class="text-neutral-400 text-xs">Climb the leaderboard.</p>
 				</div>
 				<div class="card text-center">
-					<div class="text-4xl mb-3">🎯</div>
-					<h3 class="font-bold text-white text-lg mb-2">Strategy</h3>
-					<p class="text-neutral-400 text-sm">Walk away or risk it.</p>
+					<div class="text-2xl mb-2">🎯</div>
+					<h3 class="font-bold text-white text-base mb-1">Strategy</h3>
+					<p class="text-neutral-400 text-xs">Walk away or risk it.</p>
 				</div>
 			</div>
 		</div>
@@ -115,8 +112,7 @@ const handleSubmit = async () => {
       await userStore.login(email.value, password.value)
     }
     
-    // Redirect to dashboard on success
-    router.push('/dashboard')
+    // Router guard will automatically redirect to dashboard
   } catch (error) {
     // Error is already set in the store
     console.error('Authentication failed:', error)

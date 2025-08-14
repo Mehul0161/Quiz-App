@@ -63,6 +63,9 @@ router.beforeEach((to, _from, next) => {
     next('/login')
   } else if (to.path === '/login' && token) {
     next('/dashboard')
+  } else if (to.path === '/' && token) {
+    // Redirect logged-in users from home page to dashboard
+    next('/dashboard')
   } else {
     next()
   }

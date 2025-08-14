@@ -1,48 +1,48 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
-    <div class="w-full max-w-md">
+    <div class="w-full max-w-sm">
       <!-- Header -->
-      <div class="text-center mb-8">
-        <h1 class="text-4xl font-bold text-white mb-3 bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 bg-clip-text text-transparent">
+      <div class="text-center mb-6">
+        <h1 class="text-2xl md:text-3xl font-bold text-white mb-2 bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 bg-clip-text text-transparent">
           {{ isRegistering ? 'Create Account' : 'Welcome Back' }}
         </h1>
-        <p class="text-gray-300 text-base">
+        <p class="text-gray-300 text-sm">
           {{ isRegistering ? 'Join the challenge and win big!' : 'Sign in to continue your journey' }}
         </p>
       </div>
 
       <!-- Form Card -->
-      <div class="bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 p-8 shadow-2xl">
-        <form @submit.prevent="handleSubmit" class="space-y-6">
+      <div class="bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-6 shadow-lg">
+        <form @submit.prevent="handleSubmit" class="space-y-4">
           <div v-if="isRegistering">
-            <label class="block text-sm font-semibold text-gray-200 mb-2">Username</label>
+            <label class="block text-xs font-semibold text-gray-200 mb-1">Username</label>
             <input 
               v-model="username" 
               type="text" 
               required 
-              class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200" 
+              class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-1 focus:ring-purple-400 focus:border-transparent text-white placeholder-gray-300 transition-colors duration-200 text-sm" 
               placeholder="Choose a unique username" 
             />
           </div>
           
           <div>
-            <label class="block text-sm font-semibold text-gray-200 mb-2">Email</label>
+            <label class="block text-xs font-semibold text-gray-200 mb-1">Email</label>
             <input 
               v-model="email" 
               type="email" 
               required 
-              class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200" 
+              class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-1 focus:ring-purple-400 focus:border-transparent text-white placeholder-gray-300 transition-colors duration-200 text-sm" 
               placeholder="Enter your email" 
             />
           </div>
 
           <div>
-            <label class="block text-sm font-semibold text-gray-200 mb-2">Password</label>
+            <label class="block text-xs font-semibold text-gray-200 mb-1">Password</label>
             <input 
               v-model="password" 
               type="password" 
               required 
-              class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200" 
+              class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-1 focus:ring-purple-400 focus:border-transparent text-white placeholder-gray-300 transition-colors duration-200 text-sm" 
               placeholder="Enter your password" 
             />
           </div>
@@ -50,7 +50,7 @@
           <button 
             type="submit" 
             :disabled="userStore.loading" 
-            class="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:from-purple-700 hover:via-pink-700 hover:to-indigo-700 text-white font-bold py-3 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] shadow-lg hover:shadow-xl"
+            class="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:from-purple-700 hover:via-pink-700 hover:to-indigo-700 text-white font-medium py-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
           >
             <LoadingSpinner v-if="userStore.loading" text="Processing..." />
             <span v-else>{{ isRegistering ? 'Create Account' : 'Sign In' }}</span>
@@ -58,24 +58,24 @@
         </form>
         
         <!-- Toggle Mode -->
-        <div class="mt-6 text-center">
+        <div class="mt-4 text-center">
           <button 
             @click="toggleMode" 
-            class="text-sm text-purple-300 hover:text-purple-200 font-medium transition-colors"
+            class="text-xs text-purple-300 hover:text-purple-200 font-medium transition-colors"
           >
             {{ isRegistering ? 'Already have an account? Sign in' : 'Need an account? Register' }}
           </button>
         </div>
         
         <!-- Error Display -->
-        <div v-if="userStore.error" class="mt-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-center text-red-300 text-sm animate-pulse">
+        <div v-if="userStore.error" class="mt-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-center text-red-300 text-xs">
           {{ userStore.error }}
         </div>
       </div>
       
       <!-- Back to Home -->
-      <div class="text-center mt-6">
-        <router-link to="/" class="text-sm text-gray-400 hover:text-white transition-colors">
+      <div class="text-center mt-4">
+        <router-link to="/" class="text-xs text-gray-400 hover:text-white transition-colors">
           ← Back to Home
         </router-link>
       </div>
@@ -110,8 +110,7 @@ const handleSubmit = async () => {
       await userStore.login(email.value, password.value)
     }
     
-    // Redirect to dashboard on success
-    router.push('/dashboard')
+    // Router guard will automatically redirect to dashboard
   } catch (error) {
     // Error is already set in the store
     console.error('Authentication failed:', error)

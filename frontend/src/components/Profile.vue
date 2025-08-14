@@ -1,136 +1,70 @@
 <template>
-	<div class="min-h-screen bg-neutral-950">
-		<div class="max-w-5xl mx-auto px-4 py-8">
-      <!-- Header -->
-			<div class="text-center mb-8">
-				<div class="text-6xl mb-4">👤</div>
-				<h1 class="text-3xl font-bold text-white mb-2">Player Profile</h1>
-				<p class="text-neutral-400">Your journey to becoming a millionaire</p>
-      </div>
+	<div class="min-h-screen bg-neutral-950 p-4">
+		<div class="max-w-4xl mx-auto">
+			<!-- Header -->
+			<div class="text-center mb-6">
+				<div class="w-20 h-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full grid place-items-center text-white text-2xl font-bold shadow-lg mx-auto mb-3">
+					{{ userStore.currentUser?.username.charAt(0).toUpperCase() }}
+				</div>
+				<h1 class="text-2xl md:text-3xl font-bold text-white mb-1">{{ userStore.currentUser?.username }}</h1>
+				<p class="text-neutral-400 text-sm">Member since {{ formatDate(userStore.currentUser?.createdAt) }}</p>
+			</div>
 
-			<div v-if="!userStore.isLoggedIn" class="card text-center">
-				<div class="text-5xl mb-3">❌</div>
-				<h1 class="text-xl font-bold text-red-300 mb-3">Access Denied</h1>
-				<p class="text-red-200 mb-4">You must be logged in to view your profile!</p>
-				<router-link to="/login" class="btn-primary">Login / Register</router-link>
-      </div>
+			<!-- Stats Grid -->
+			<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+				<div class="card-compact border-2 border-yellow-500/30 bg-yellow-500/5 text-center">
+					<div class="text-3xl mb-1">💰</div>
+					<div class="text-xs text-neutral-300 mb-1">Total Earnings</div>
+					<div class="text-lg font-bold text-yellow-400">${{ userStore.currentUser?.totalEarnings?.toLocaleString() || 0 }}</div>
+				</div>
+				<div class="card-compact border-2 border-blue-500/30 bg-blue-500/5 text-center">
+					<div class="text-3xl mb-1">🎮</div>
+					<div class="text-xs text-neutral-300 mb-1">Games Played</div>
+					<div class="text-lg font-bold text-blue-400">{{ userStore.currentUser?.gamesPlayed || 0 }}</div>
+				</div>
+				<div class="card-compact border-2 border-green-500/30 bg-green-500/5 text-center">
+					<div class="text-3xl mb-1">🏆</div>
+					<div class="text-xs text-neutral-300 mb-1">Best Score</div>
+					<div class="text-lg font-bold text-green-400">${{ userStore.currentUser?.highestScore?.toLocaleString() || 0 }}</div>
+				</div>
+				<div class="card-compact border-2 border-purple-500/30 bg-purple-500/5 text-center">
+					<div class="text-3xl mb-1">📈</div>
+					<div class="text-xs text-neutral-300 mb-1">Win Rate</div>
+					<div class="text-lg font-bold text-purple-400">{{ getWinRate() }}%</div>
+				</div>
+			</div>
 
-      <div v-else>
-				<!-- Profile Header -->
-				<div class="card mb-6">
-					<div class="flex flex-col lg:flex-row items-center gap-6">
-						<div class="w-24 h-24 bg-indigo-600 rounded-full grid place-items-center text-white text-4xl font-bold">
-							{{ userStore.currentUser?.username.charAt(0).toUpperCase() }}
+			<!-- Game History -->
+			<div class="card">
+				<h3 class="text-lg font-bold text-white mb-3">Game History</h3>
+				<div v-if="!userStore.currentUser?.gameHistory || userStore.currentUser.gameHistory.length === 0" class="text-center text-neutral-400 py-6">
+					<div class="text-3xl mb-2">🎯</div>
+					<p class="text-sm">No games played yet. Start your first game!</p>
+				</div>
+				<div v-else class="space-y-2">
+					<div v-for="(game, index) in userStore.currentUser.gameHistory.slice(0, 5)" :key="index" class="flex items-center justify-between p-3 bg-neutral-800 rounded border border-neutral-700">
+						<div class="flex items-center gap-3">
+							<div class="w-8 h-8 bg-indigo-600 rounded-full grid place-items-center text-white text-sm font-bold">🎮</div>
+							<div>
+								<div class="font-medium text-white text-sm">Game {{ index + 1 }}</div>
+								<div class="text-xs text-neutral-400">Score: ${{ game.score?.toLocaleString() || 0 }}</div>
+							</div>
 						</div>
-						<div class="text-center lg:text-left">
-							<h2 class="text-3xl font-bold text-white mb-2">{{ userStore.currentUser?.username }}</h2>
-							<p class="text-neutral-300 text-sm mb-3">Member since {{ formatDate(userStore.currentUser?.createdAt) }}</p>
-							<div class="flex flex-wrap gap-2 justify-center lg:justify-start">
-								<span class="px-3 py-1 bg-purple-600/20 border border-purple-500/30 rounded text-purple-300 text-sm font-semibold">
-									🎮 Quiz Player
-								</span>
-								<span v-if="(userStore.currentUser?.totalEarnings || 0) >= 1000000" class="px-3 py-1 bg-yellow-600/20 border border-yellow-500/30 rounded text-yellow-300 text-sm font-semibold">
-									👑 Millionaire
-								</span>
-								<span v-else-if="(userStore.currentUser?.totalEarnings || 0) >= 100000" class="px-3 py-1 bg-blue-600/20 border border-blue-500/30 rounded text-blue-300 text-sm font-semibold">
-									⭐ Elite Player
-								</span>
-            </div>
-          </div>
-            </div>
-          </div>
-          
-				<!-- Stats Grid -->
-				<div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
-					<div class="card-compact text-center">
-						<div class="text-4xl mb-2">💰</div>
-						<h3 class="font-bold text-neutral-300 text-sm mb-1">Total Earnings</h3>
-						<p class="text-2xl font-bold text-yellow-400">${{ userStore.currentUser?.totalEarnings.toLocaleString() || 0 }}</p>
-            </div>
-
-					<div class="card-compact text-center">
-						<div class="text-4xl mb-2">🎮</div>
-						<h3 class="font-bold text-neutral-300 text-sm mb-1">Games Played</h3>
-						<p class="text-2xl font-bold text-blue-400">{{ userStore.currentUser?.gamesPlayed || 0 }}</p>
-          </div>
-          
-					<div class="card-compact text-center">
-						<div class="text-4xl mb-2">🏆</div>
-						<h3 class="font-bold text-neutral-300 text-sm mb-1">Best Score</h3>
-						<p class="text-2xl font-bold text-green-400">${{ userStore.currentUser?.highestScore?.toLocaleString() || 0 }}</p>
-            </div>
-
-					<div class="card-compact text-center">
-						<div class="text-4xl mb-2">📈</div>
-						<h3 class="font-bold text-neutral-300 text-sm mb-1">Success Rate</h3>
-						<p class="text-2xl font-bold text-purple-400">{{ getWinRate() }}%</p>
-          </div>
-        </div>
-
-				<!-- Progress Section -->
-				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-					<!-- Millionaire Progress -->
-					<div class="card">
-						<h3 class="text-lg font-bold text-white mb-4 text-center">Millionaire Progress</h3>
-						<div class="space-y-3">
-							<div class="flex justify-between text-sm">
-								<span class="text-neutral-300">Current: ${{ userStore.currentUser?.totalEarnings.toLocaleString() || 0 }}</span>
-								<span class="text-neutral-300">Target: $1,000,000</span>
-                    </div>
-							<div class="w-full bg-neutral-800 rounded-full h-3 overflow-hidden border border-neutral-700">
-								<div
-									class="bg-indigo-600 h-3 transition-all duration-1000"
-									:style="{ width: Math.min((userStore.currentUser?.totalEarnings || 0) / 1000000 * 100, 100) + '%' }"
-								></div>
-                  </div>
-							<div class="text-center text-sm text-neutral-400">
-								{{ Math.round((userStore.currentUser?.totalEarnings || 0) / 1000000 * 100) }}% Complete
-              </div>
-            </div>
-          </div>
-
-					<!-- Recent Achievements -->
-					<div class="card">
-						<h3 class="text-lg font-bold text-white mb-4 text-center">Recent Achievements</h3>
-						<div class="space-y-2">
-							<div v-if="(userStore.currentUser?.totalEarnings || 0) >= 1000000" class="flex items-center gap-3 p-3 bg-yellow-600/20 border border-yellow-500/30 rounded">
-								<div class="text-xl">👑</div>
-								<div>
-									<div class="font-bold text-yellow-300 text-sm">Millionaire!</div>
-									<div class="text-xs text-yellow-200">Reached $1,000,000 in earnings</div>
-								</div>
-                </div>
-							<div v-if="(userStore.currentUser?.gamesPlayed || 0) >= 10" class="flex items-center gap-3 p-3 bg-blue-600/20 border border-blue-500/30 rounded">
-								<div class="text-xl">🎯</div>
-								<div>
-									<div class="font-bold text-blue-300 text-sm">Veteran Player</div>
-									<div class="text-xs text-blue-200">Played 10+ games</div>
-                    </div>
-                  </div>
-							<div v-if="(userStore.currentUser?.highestScore || 0) >= 100000" class="flex items-center gap-3 p-3 bg-green-600/20 border border-green-500/30 rounded">
-								<div class="text-xl">⭐</div>
-								<div>
-									<div class="font-bold text-green-300 text-sm">High Roller</div>
-									<div class="text-xs text-green-200">Scored $100,000+ in a single game</div>
-                </div>
-              </div>
-							<div v-if="!userStore.currentUser?.totalEarnings || userStore.currentUser?.totalEarnings < 100000" class="text-center text-neutral-400 py-3 text-sm">
-								Keep playing to unlock achievements!
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Action Buttons -->
-				<div class="text-center">
-					<div class="flex flex-col sm:flex-row gap-4 justify-center">
-						<router-link to="/setup" class="btn-primary">🎮 Play Again</router-link>
-						<router-link to="/leaderboard" class="btn-secondary">🏆 View Leaderboard</router-link>
+						<div class="text-right">
+							<div class="text-xs text-neutral-400">{{ formatDate(game.date) }}</div>
+							<div class="font-bold text-green-400 text-sm">${{ game.score?.toLocaleString() || 0 }}</div>
+						</div>
 					</div>
-        </div>
-      </div>
-    </div>
-  </div>
+				</div>
+			</div>
+
+			<!-- Actions -->
+			<div class="flex justify-center gap-3 mt-6">
+				<router-link to="/setup" class="btn-primary">Start New Game</router-link>
+				<router-link to="/dashboard" class="btn-secondary">Back to Dashboard</router-link>
+			</div>
+		</div>
+	</div>
 </template>
 
 <script setup lang="ts">
@@ -143,7 +77,7 @@ const userStore = useUserStore()
 
 onMounted(() => {
   if (!userStore.isLoggedIn) {
-    router.push('/')
+    router.push('/login')
   }
 })
 
