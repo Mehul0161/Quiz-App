@@ -445,66 +445,163 @@ app.get('/api/leaderboard', async (req, res) => {
     }
 });
 
-// Test route
+// Simple test endpoint
 app.get('/api/test', (req, res) => {
-    res.json({ 
-        message: 'Server is working!',
-        timestamp: new Date().toISOString(),
-        geminiConfigured: !!process.env.GEMINI_API_KEY,
-        mongodbUri: process.env.MONGODB_URI ? 'Set' : 'Not Set',
-        mongodbDbName: process.env.MONGODB_DB_NAME || 'quiz-app'
-    });
-});
+	res.json({ 
+		message: 'Server is working!', 
+		timestamp: new Date().toISOString(),
+		geminiKey: process.env.GEMINI_API_KEY ? 'Present' : 'Missing',
+		mongodbUri: process.env.MONGODB_URI ? 'Present' : 'Missing',
+		nodeEnv: process.env.NODE_ENV || 'Not set',
+		vercel: !!process.env.VERCEL
+	})
+})
 
-// Simple test endpoint for debugging
-app.get('/api/debug', (req, res) => {
-    res.json({
-        message: 'Debug endpoint working',
-        timestamp: new Date().toISOString(),
-        environment: {
-            nodeEnv: process.env.NODE_ENV,
-            vercel: !!process.env.VERCEL,
-            mongodbUri: process.env.MONGODB_URI ? 'Configured' : 'Missing',
-            mongodbDbName: process.env.MONGODB_DB_NAME || 'quiz-app'
-        }
-    });
-});
+// Admin endpoint to clean up old questions and regenerate pools
+app.post('/api/admin/questions/cleanup', async (req, res) => {
+	try {
+		if (!mongoService.isConnected) {
+			await mongoService.connect()
+		}
 
-// Test MongoDB connection directly
-app.get('/api/test-mongo', async (req, res) => {
-    try {
-        console.log('Testing MongoDB connection...');
-        console.log('MONGODB_URI exists:', !!process.env.MONGODB_URI);
-        console.log('MONGODB_DB_NAME:', process.env.MONGODB_DB_NAME || 'quiz-app');
-        
-        try {
-            await mongoService.connect();
-            const dbName = process.env.MONGODB_DB_NAME || 'quiz-app';
-            
-            res.json({
-                message: 'MongoDB connection successful',
-                database: dbName,
-                timestamp: new Date().toISOString()
-            });
-        } catch (connectionError) {
-            console.error('MongoDB connection failed:', connectionError.message);
-            res.status(500).json({
-                error: 'MongoDB connection failed',
-                details: connectionError.message,
-                mongodbUri: process.env.MONGODB_URI ? 'Set' : 'Not Set',
-                mongodbDbName: process.env.MONGODB_DB_NAME || 'quiz-app'
-            });
-        }
-    } catch (error) {
-        console.error('MongoDB test failed:', error);
-        res.status(500).json({
-            error: 'MongoDB connection failed',
-            details: error.message,
-            mongodbUri: process.env.MONGODB_URI ? 'Set' : 'Not Set',
-            mongodbDbName: process.env.MONGODB_DB_NAME || 'quiz-app'
-        });
-    }
-});
+		const questionsCollection = mongoService.getCollection('questions')
+		
+		// Get all categories
+		const categories = await questionsCollection.distinct('category')
+		
+		let cleanupResults = []
+		
+		for (const category of categories) {
+			const count = await questionsCollection.countDocuments({ category: category })
+			
+			if (count > 100) {
+				const questionsToRemove = count - 100
+				const oldestQuestions = await questionsCollection
+					.find({ category: category })
+					.sort({ createdAt: 1 })
+					.limit(questionsToRemove)
+					.toArray()
+
+				if (oldestQuestions.length > 0) {
+					const questionIds = oldestQuestions.map(q => q._id)
+					await questionsCollection.deleteMany({ _id: { $in: questionIds } })
+					
+					cleanupResults.push({
+						category,
+						removed: questionsToRemove,
+						newCount: count - questionsToRemove
+					})
+				}
+			} else {
+				cleanupResults.push({
+					category,
+					removed: 0,
+					newCount: count
+				})
+			}
+		}
+
+		res.json({ 
+			success: true, 
+			message: 'Cleanup completed',
+			results: cleanupResults
+		})
+	} catch (error) {
+		console.error('Error during cleanup:', error)
+		res.status(500).json({ error: 'Failed to perform cleanup' })
+	}
+})
+
+// Get question statistics for each category
+app.get('/api/questions/stats', async (req, res) => {
+	try {
+		if (!mongoService.isConnected) {
+			await mongoService.connect()
+		}
+
+		const questionsCollection = mongoService.getCollection('questions')
+		
+		// Get question count by category
+		const stats = await questionsCollection.aggregate([
+			{
+				$group: {
+					_id: '$category',
+					totalQuestions: { $sum: 1 },
+					byGameMode: {
+						$push: {
+							gameMode: '$gameMode',
+							createdAt: '$createdAt'
+						}
+					}
+				}
+			},
+			{
+				$project: {
+					category: '$_id',
+					totalQuestions: 1,
+					byGameMode: 1,
+					oldestQuestion: { $min: '$byGameMode.createdAt' },
+					newestQuestion: { $max: '$byGameMode.createdAt' }
+				}
+			},
+			{ $sort: { category: 1 } }
+		]).toArray()
+
+		res.json({ 
+			success: true, 
+			stats,
+			totalCategories: stats.length,
+			totalQuestions: stats.reduce((sum, cat) => sum + cat.totalQuestions, 0)
+		})
+	} catch (error) {
+		console.error('Error getting question stats:', error)
+		res.status(500).json({ error: 'Failed to get question statistics' })
+	}
+})
+
+// Simple quiz test endpoint (no AI required)
+app.post('/api/quizzes/test', async (req, res) => {
+	try {
+		const { category, mode } = req.body
+		
+		if (!category || !mode) {
+			return res.status(400).json({ error: 'Category and mode are required' })
+		}
+
+		console.log(`Testing quiz generation for category: ${category}, mode: ${mode}`)
+
+		// Return fallback questions for testing
+		let questions = []
+		
+		switch (mode) {
+			case 'normal':
+				questions = generateFallbackQuestions(category)
+				break
+			case 'rapidfire':
+				questions = generateFallbackQuestions(category)
+				break
+			case 'nooptions':
+				questions = generateFallbackQuestionsNoOptions(category)
+				break
+			case 'imagebased':
+				questions = generateImageBasedQuestions(category)
+				break
+			default:
+				return res.status(400).json({ error: 'Invalid game mode' })
+		}
+
+		res.json({ 
+			questions,
+			mode,
+			category,
+			totalQuestions: questions.length,
+			message: 'Test quiz generated successfully (fallback questions)'
+		})
+	} catch (error) {
+		console.error('Error in test quiz:', error)
+		res.status(500).json({ error: 'Failed to generate test quiz' })
+	}
+})
 
 // Quiz generation routes
 app.post('/api/quizzes/start', async (req, res) => {
@@ -549,7 +646,7 @@ app.post('/api/quizzes/start', async (req, res) => {
 	}
 })
 
-// Generate normal mode questions using AI
+// Generate normal mode questions using AI (always generate new questions)
 async function generateNormalQuestions(category) {
 	try {
 		console.log(`Generating AI questions for Normal Mode - Category: ${category}`)
@@ -560,6 +657,16 @@ async function generateNormalQuestions(category) {
 			return generateFallbackQuestions(category)
 		}
 
+		// Initialize Gemini service if needed
+		try {
+			await geminiService.initialize()
+		} catch (initError) {
+			console.error('Failed to initialize Gemini service:', initError)
+			console.log('Falling back to static questions for Normal Mode')
+			return generateFallbackQuestions(category)
+		}
+
+		// Always generate new AI questions for normal mode
 		const aiResponse = await geminiService.generateNewQuestions(category)
 		console.log('AI Response received for Normal Mode')
 		
@@ -585,6 +692,13 @@ async function generateNormalQuestions(category) {
                 }
 			}))
 			
+			// Store new questions in database and manage the 100 question limit
+			try {
+				await storeQuestionsAndManageLimit(category, transformedQuestions)
+			} catch (storageError) {
+				console.error('Failed to store questions, but continuing with game:', storageError)
+			}
+			
 			console.log('Successfully transformed AI questions for Normal Mode')
 			return transformedQuestions
 		} else {
@@ -597,19 +711,102 @@ async function generateNormalQuestions(category) {
 	}
 }
 
-// Generate rapid fire questions from database (unlimited pool)
+// Store new questions and manage the 100 question limit per category
+async function storeQuestionsAndManageLimit(category, newQuestions) {
+	try {
+		if (!mongoService.isConnected) {
+			console.log('MongoDB not connected, skipping question storage')
+			return
+		}
+
+		const questionsCollection = mongoService.getCollection('questions')
+		
+		// Transform questions to database format based on their structure
+		const questionsToStore = newQuestions.map(q => {
+			const baseQuestion = {
+				question: q.question,
+				options: q.options,
+				correct_answer: q.correctAnswer,
+				difficulty_level: q.difficulty,
+				explanation: q.explanation,
+				category: category,
+				createdAt: new Date(),
+				used: false,
+				lastUsed: null,
+				prizeValue: q.prizeValue
+			}
+
+			// Handle different game modes
+			if (q.id?.startsWith('normal_')) {
+				baseQuestion.gameMode = 'normal'
+				baseQuestion.lifelines = q.lifelines
+			} else if (q.id?.startsWith('rapidfire_')) {
+				baseQuestion.gameMode = 'rapidfire'
+			} else if (q.id?.startsWith('nooptions_')) {
+				baseQuestion.gameMode = 'nooptions'
+				baseQuestion.acceptableAnswers = q.acceptableAnswers
+			} else if (q.id?.startsWith('img_')) {
+				baseQuestion.gameMode = 'imagebased'
+				baseQuestion.imageQuery = q.imageQuery
+			}
+
+			return baseQuestion
+		})
+
+		// Insert new questions
+		if (questionsToStore.length > 0) {
+			await questionsCollection.insertMany(questionsToStore)
+			console.log(`Stored ${questionsToStore.length} new questions for category: ${category}`)
+		}
+
+		// Check current question count for this category
+		const currentCount = await questionsCollection.countDocuments({ category: category })
+		console.log(`Current question count for ${category}: ${currentCount}`)
+
+		// If we exceed 100 questions, remove the oldest ones
+		if (currentCount > 100) {
+			const questionsToRemove = currentCount - 100
+			console.log(`Removing ${questionsToRemove} oldest questions from ${category}`)
+			
+			// Find and remove the oldest questions
+			const oldestQuestions = await questionsCollection
+				.find({ category: category })
+				.sort({ createdAt: 1 })
+				.limit(questionsToRemove)
+				.toArray()
+
+			if (oldestQuestions.length > 0) {
+				const questionIds = oldestQuestions.map(q => q._id)
+				await questionsCollection.deleteMany({ _id: { $in: questionIds } })
+				console.log(`Removed ${oldestQuestions.length} oldest questions from ${category}`)
+			}
+		}
+	} catch (error) {
+		console.error('Error managing question database:', error)
+		// Don't throw error - this shouldn't break the game
+	}
+}
+
+// Generate rapid fire questions using AI (always generate new questions)
 async function generateRapidFireQuestions(category) {
 	try {
-		console.log(`Fetching unlimited questions for Rapid Fire Mode - Category: ${category}`);
+		console.log(`Generating AI questions for Rapid Fire Mode - Category: ${category}`)
+		
+		// Check if Gemini API key is available
+		if (!process.env.GEMINI_API_KEY) {
+			console.error('GEMINI_API_KEY not found, using fallback questions')
+			return generateFallbackQuestions(category)
+		}
 
-		// Get all available questions from database for unlimited rapid fire
-		const allQuestions = await geminiService.getQuestionsFromDB(category);
+		// Always generate new AI questions for rapid fire mode
+		const aiResponse = await geminiService.generateNewQuestions(category)
+		console.log('AI Response received for Rapid Fire Mode')
 
-		if (allQuestions && allQuestions.length > 0) {
-			console.log(`Using ${allQuestions.length} database questions for Rapid Fire Mode`);
+		if (aiResponse && aiResponse.content && aiResponse.content.questions) {
+			const questions = aiResponse.content.questions
+			console.log(`Processing ${questions.length} AI questions for Rapid Fire Mode`)
 
-			// Transform all questions for rapid fire (unlimited pool)
-			const transformedQuestions = allQuestions.map((q, index) => ({
+			const transformedQuestions = questions.map((q, index) => ({
 				id: `rapidfire_${Date.now()}_${index}`,
 				question: q.question,
 				options: q.options,
@@ -618,42 +815,20 @@ async function generateRapidFireQuestions(category) {
 				explanation: q.explanation,
 				category: category,
 				questionNumber: index + 1,
-				// No prize value for rapid fire - uses scoring system instead
-				// No lifelines for rapid fire mode
-			}));
+			}))
 
-			console.log('Successfully transformed database questions for Rapid Fire Mode');
-			return transformedQuestions;
+			// Store new questions in database and manage the 100 question limit
+			await storeQuestionsAndManageLimit(category, transformedQuestions)
+
+			console.log('Successfully transformed AI questions for Rapid Fire Mode')
+			return transformedQuestions
 		} else {
-			// Fallback to AI generation if no database questions
-			console.log('No database questions found, generating new ones for Rapid Fire Mode');
-			const aiResponse = await geminiService.generateQuestions(category);
-
-			if (aiResponse && aiResponse.content && aiResponse.content.questions) {
-				const questions = aiResponse.content.questions;
-				console.log(`Processing ${questions.length} AI questions for Rapid Fire Mode`);
-
-				const transformedQuestions = questions.map((q, index) => ({
-					id: `rapidfire_${Date.now()}_${index}`,
-					question: q.question,
-					options: q.options,
-					correctAnswer: q.correct_answer,
-					difficulty: q.difficulty_level,
-					explanation: q.explanation,
-					category: category,
-					questionNumber: index + 1,
-				}));
-
-				console.log('Successfully transformed AI questions for Rapid Fire Mode');
-				return transformedQuestions;
-			} else {
-				throw new Error('Invalid AI response format');
-			}
+			throw new Error('Invalid AI response format')
 		}
 	} catch (error) {
-		console.error('Error generating Rapid Fire questions:', error);
-		console.log('Falling back to static questions for Rapid Fire Mode');
-		return generateFallbackQuestions(category);
+		console.error('Error generating Rapid Fire questions:', error)
+		console.log('Falling back to static questions for Rapid Fire Mode')
+		return generateFallbackQuestions(category)
 	}
 }
 
@@ -727,6 +902,9 @@ async function generateNoOptionsQuestions(category) {
 				prizeValue: PRIZE_STRUCTURE[index]
 			}))
 			
+			// Store new questions in database and manage the 100 question limit
+			await storeQuestionsAndManageLimit(category, transformedQuestions)
+			
 			console.log('Successfully transformed AI questions for No Options Mode')
 			return transformedQuestions
         } else {
@@ -791,6 +969,10 @@ async function generateImageBasedQuestionsAI(category) {
 					imageQuery: String(query || category).toLowerCase()
 				})
 			})
+			
+			// Store new questions in database and manage the 100 question limit
+			await storeQuestionsAndManageLimit(category, transformed)
+			
 			return transformed
 		}
 		throw new Error('Invalid image AI response')
@@ -941,49 +1123,6 @@ app.post('/api/questions/generate-pool', async (req, res) => {
     } catch (error) {
         console.error('Error generating question pool:', error);
         res.status(500).json({ error: 'Failed to generate question pool' });
-    }
-});
-
-// Get question statistics
-app.get('/api/questions/stats', async (req, res) => {
-    try {
-        if (!mongoService.isConnected) {
-            return res.status(503).json({ error: 'Database not available' });
-        }
-        
-        const questionsCollection = mongoService.getCollection('questions');
-        const stats = await questionsCollection.aggregate([
-            {
-                $group: {
-                    _id: '$category',
-                    count: { $sum: 1 },
-                    difficulties: { $addToSet: '$difficulty_level' },
-                    usedCount: { $sum: { $cond: ['$used', 1, 0] } },
-                    unusedCount: { $sum: { $cond: ['$used', 0, 1] } }
-                }
-            }
-        ]).toArray();
-        
-        // Add limit information to each category
-        const enhancedStats = stats.map(stat => ({
-            ...stat,
-            limit: 100,
-            remaining: Math.max(0, 100 - stat.count),
-            isFull: stat.count >= 100
-        }));
-        
-        res.json({ 
-            success: true, 
-            stats: enhancedStats,
-            summary: {
-                totalCategories: enhancedStats.length,
-                totalQuestions: enhancedStats.reduce((sum, stat) => sum + stat.count, 0),
-                maxQuestionsPossible: enhancedStats.length * 100
-            }
-        });
-    } catch (error) {
-        console.error('Error fetching question stats:', error);
-        res.status(500).json({ error: 'Failed to fetch question statistics' });
     }
 });
 

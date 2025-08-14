@@ -64,6 +64,19 @@
 				</router-link>
 			</div>
 
+			<!-- Admin Section (if user is admin) -->
+			<div v-if="userStore.currentUser?.username === 'admin'" class="card mb-6">
+				<h3 class="text-base font-bold text-white mb-3">Admin Panel</h3>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+					<button @click="viewQuestionStats" class="btn-secondary text-xs">
+						📊 View Question Stats
+					</button>
+					<button @click="cleanupQuestions" class="btn-secondary text-xs">
+						🧹 Cleanup Questions
+					</button>
+				</div>
+			</div>
+
 			<!-- Recent Activity -->
 			<div class="card">
 				<h3 class="text-base font-bold text-white mb-3">Recent Activity</h3>
@@ -108,5 +121,46 @@ const getWinRate = () => {
 const logout = () => {
 	userStore.logout()
 	router.push('/login')
+}
+
+// Admin functions
+const viewQuestionStats = async () => {
+	try {
+		const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/questions/stats`)
+		const data = await response.json()
+		
+		if (data.success) {
+			console.log('Question Statistics:', data)
+			alert(`Total Categories: ${data.totalCategories}\nTotal Questions: ${data.totalQuestions}\n\nCheck console for detailed stats.`)
+		} else {
+			alert('Failed to fetch question stats')
+		}
+	} catch (error) {
+		console.error('Error fetching question stats:', error)
+		alert('Error fetching question stats')
+	}
+}
+
+const cleanupQuestions = async () => {
+	if (!confirm('This will remove old questions to maintain the 100 question limit per category. Continue?')) {
+		return
+	}
+	
+	try {
+		const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/admin/questions/cleanup`, {
+			method: 'POST'
+		})
+		const data = await response.json()
+		
+		if (data.success) {
+			console.log('Cleanup Results:', data)
+			alert(`Cleanup completed!\n\nCheck console for detailed results.`)
+		} else {
+			alert('Failed to perform cleanup')
+		}
+	} catch (error) {
+		console.error('Error during cleanup:', error)
+		alert('Error during cleanup')
+	}
 }
 </script>

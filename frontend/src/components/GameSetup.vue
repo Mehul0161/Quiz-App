@@ -120,9 +120,22 @@
 
 				<!-- Start Game Button -->
 				<div v-if="selectedMode && selectedCategory" class="text-center">
-					<button @click="startGame" class="btn-primary px-8 py-3 text-base font-medium">
-						🚀 Start Game
+					<button @click="testServer" class="btn-secondary px-4 py-2 text-sm font-medium mb-2">
+						🔧 Test Server Connection
 					</button>
+					<button @click="testQuiz" class="btn-secondary px-4 py-2 text-sm font-medium mb-2">
+						🧪 Test Quiz Generation
+					</button>
+					<button @click="startGame" :disabled="loading" class="btn-primary px-8 py-3 text-base font-medium">
+						<span v-if="loading" class="flex items-center gap-2">
+							<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+							Generating AI Questions...
+						</span>
+						<span v-else>🚀 Start Game</span>
+					</button>
+					<p v-if="loading" class="text-xs text-neutral-400 mt-2">
+						AI is creating fresh questions for you...
+					</p>
 				</div>
 			</div>
 		</div>
@@ -133,9 +146,11 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
+import { useQuizStore } from '../stores/quiz'
 
 const router = useRouter()
 const userStore = useUserStore()
+const quizStore = useQuizStore()
 
 const selectedMode = ref('')
 const selectedCategory = ref('')
@@ -223,12 +238,62 @@ const startGame = async () => {
 		loading.value = true
 		error.value = null
 		
-		// Navigate to game with selected options
+		console.log('Starting quiz with:', { mode: selectedMode.value, category: selectedCategory.value })
+		
+		// Start the quiz using the quiz store
+		await quizStore.startQuiz(selectedCategory.value, selectedMode.value)
+		
+		console.log('Quiz started successfully, navigating to game...')
+		
+		// Navigate to game after successfully starting quiz
 		router.push('/game')
 	} catch (err: any) {
-		error.value = err.response?.data?.error || 'Failed to start game'
+		console.error('Error starting quiz:', err)
+		error.value = err.message || 'Failed to start game'
 	} finally {
 		loading.value = false
+	}
+}
+
+const testServer = async () => {
+	try {
+		const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/test`)
+		const data = await response.json()
+		
+		console.log('Server test response:', data)
+		alert(`Server Status: ${data.message}\nGemini API Key: ${data.geminiKey}\nTimestamp: ${data.timestamp}`)
+	} catch (error) {
+		console.error('Server test failed:', error)
+		alert(`Server test failed: ${error.message}`)
+	}
+}
+
+const testQuiz = async () => {
+	if (!selectedMode.value || !selectedCategory.value) return
+	
+	try {
+		const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/quizzes/test`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				category: selectedCategory.value,
+				mode: selectedMode.value
+			})
+		})
+		
+		const data = await response.json()
+		
+		if (data.success !== false) {
+			console.log('Test quiz response:', data)
+			alert(`Test Quiz Generated!\nQuestions: ${data.totalQuestions}\nMode: ${data.mode}\nCategory: ${data.category}\n\nCheck console for details.`)
+		} else {
+			alert(`Test quiz failed: ${data.error}`)
+		}
+	} catch (error) {
+		console.error('Test quiz failed:', error)
+		alert(`Test quiz failed: ${error.message}`)
 	}
 }
 </script>
