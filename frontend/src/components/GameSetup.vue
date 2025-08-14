@@ -140,7 +140,7 @@ const userStore = useUserStore()
 const selectedMode = ref('')
 const selectedCategory = ref('')
 const loading = ref(false)
-const error = ref('')
+const error = ref<string | null>('')
 
 const gameModes = [
 	{
