@@ -6,6 +6,7 @@ const mongoService = require('./mongoService');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { ObjectId } = require('mongodb'); // Added ObjectId import
+const { OAuth2Client } = require('google-auth-library');
 
 dotenv.config();
 
@@ -202,6 +203,17 @@ const PRIZE_STRUCTURE = [
     1000000 // Question 15 - Millionaire!
 ];
 
+// Google OAuth client (optional)
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || '';
+const FRONTEND_BASE_URL = process.env.FRONTEND_ORIGIN;
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client({
+    clientId: GOOGLE_CLIENT_ID,
+    clientSecret: GOOGLE_CLIENT_SECRET || undefined,
+    redirectUri: GOOGLE_REDIRECT_URI || undefined
+}) : null;
+
 // User routes
 app.post('/api/users/register', async (req, res) => {
     try {
@@ -321,6 +333,129 @@ app.post('/api/users/login', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+// Google OAuth login/signup
+app.post('/api/users/google', async (req, res) => {
+    try {
+        const { idToken } = req.body;
+        if (!idToken) return res.status(400).json({ error: 'idToken is required' });
+        if (!googleClient) return res.status(500).json({ error: 'Google OAuth not configured' });
+
+        const ticket = await googleClient.verifyIdToken({ idToken, audience: GOOGLE_CLIENT_ID });
+        const payload = ticket.getPayload();
+        if (!payload) return res.status(401).json({ error: 'Invalid Google token' });
+        const email = payload.email;
+        const username = (payload.name || email.split('@')[0]).trim();
+
+        await mongoService.connect();
+        const usersCollection = mongoService.getCollection('users');
+
+        let user = await usersCollection.findOne({ email });
+        if (!user) {
+            user = {
+                username,
+                email,
+                password: '',
+                totalEarnings: 0,
+                gamesPlayed: 0,
+                highestScore: 0,
+                achievements: [],
+                stats: {
+                    normal: { gamesPlayed: 0, totalScore: 0, highestScore: 0, questionsAnswered: 0, lastPlayedAt: null, lastCategory: null },
+                    rapidfire: { gamesPlayed: 0, totalScore: 0, highestScore: 0, questionsAnswered: 0, lastPlayedAt: null, lastCategory: null },
+                    nooptions: { gamesPlayed: 0, totalScore: 0, highestScore: 0, questionsAnswered: 0, lastPlayedAt: null, lastCategory: null },
+                },
+                gameHistory: [],
+                createdAt: new Date().toISOString()
+            };
+            const result = await usersCollection.insertOne(user);
+            user._id = result.insertedId;
+        }
+
+        const token = generateToken(user);
+        res.json({ user, token });
+    } catch (error) {
+        console.error('Google auth error:', error);
+        res.status(500).json({ error: 'Google authentication failed' });
+    }
+});
+
+// Google OAuth (redirect) - start
+app.get('/api/auth/google', async (req, res) => {
+    try {
+        if (!googleClient || !GOOGLE_REDIRECT_URI) {
+            return res.status(500).json({ error: 'Google OAuth redirect flow not configured' })
+        }
+        const url = googleClient.generateAuthUrl({
+            access_type: 'offline',
+            prompt: 'consent',
+            scope: ['openid', 'email', 'profile'],
+            redirect_uri: GOOGLE_REDIRECT_URI
+        })
+        res.redirect(url)
+    } catch (e) {
+        console.error('Google auth start error:', e)
+        res.status(500).json({ error: 'Failed to start Google auth' })
+    }
+})
+
+// Google OAuth (redirect) - callback
+app.get('/api/auth/google/callback', async (req, res) => {
+    try {
+        const code = req.query.code
+        if (!googleClient || !GOOGLE_REDIRECT_URI) {
+            return res.status(500).send('Google OAuth not configured')
+        }
+        if (!code) return res.status(400).send('Missing code')
+
+        const { tokens } = await googleClient.getToken({ code, redirect_uri: GOOGLE_REDIRECT_URI })
+        const idToken = tokens.id_token
+        if (!idToken) return res.status(401).send('No id_token returned')
+
+        const ticket = await googleClient.verifyIdToken({ idToken, audience: GOOGLE_CLIENT_ID })
+        const payload = ticket.getPayload()
+        if (!payload) return res.status(401).send('Invalid token payload')
+        const email = payload.email
+        const username = (payload.name || email.split('@')[0]).trim()
+
+        await mongoService.connect()
+        const usersCollection = mongoService.getCollection('users')
+        let user = await usersCollection.findOne({ email })
+        if (!user) {
+            user = {
+                username,
+                email,
+                password: '',
+                totalEarnings: 0,
+                gamesPlayed: 0,
+                highestScore: 0,
+                achievements: [],
+                stats: {
+                    normal: { gamesPlayed: 0, totalScore: 0, highestScore: 0, questionsAnswered: 0, lastPlayedAt: null, lastCategory: null },
+                    rapidfire: { gamesPlayed: 0, totalScore: 0, highestScore: 0, questionsAnswered: 0, lastPlayedAt: null, lastCategory: null },
+                    nooptions: { gamesPlayed: 0, totalScore: 0, highestScore: 0, questionsAnswered: 0, lastPlayedAt: null, lastCategory: null },
+                },
+                gameHistory: [],
+                createdAt: new Date().toISOString()
+            }
+            const result = await usersCollection.insertOne(user)
+            user._id = result.insertedId
+        }
+
+        const token = generateToken(user)
+        // Redirect back to frontend with token
+        const target = FRONTEND_BASE_URL || (req.headers.origin || '').toString()
+        if (!target) {
+            return res.json({ user, token })
+        }
+        const url = new URL('/oauth/callback', target)
+        url.searchParams.set('token', token)
+        res.redirect(url.toString())
+    } catch (e) {
+        console.error('Google auth callback error:', e)
+        res.status(500).send('Google authentication failed')
+    }
+})
 
 // Get user by ID (protected route)
 app.get('/api/users/:id', authenticateToken, async (req, res) => {
@@ -573,18 +708,15 @@ app.post('/api/quizzes/test', async (req, res) => {
 		// Return fallback questions for testing
 		let questions = []
 		
-		switch (mode) {
+    switch (mode) {
 			case 'normal':
 				questions = generateFallbackQuestions(category)
 				break
 			case 'rapidfire':
 				questions = generateFallbackQuestions(category)
 				break
-			case 'nooptions':
+            case 'nooptions':
 				questions = generateFallbackQuestionsNoOptions(category)
-				break
-			case 'imagebased':
-				questions = generateImageBasedQuestions(category)
 				break
 			default:
 				return res.status(400).json({ error: 'Invalid game mode' })
@@ -617,7 +749,7 @@ app.post('/api/quizzes/start', async (req, res) => {
 		// Generate questions based on mode
 		let questions = []
 		
-		switch (mode) {
+    switch (mode) {
 			case 'normal':
 				questions = await generateNormalQuestions(category)
 				break
@@ -626,9 +758,6 @@ app.post('/api/quizzes/start', async (req, res) => {
 				break
 			case 'nooptions':
 				questions = await generateNoOptionsQuestions(category)
-				break
-			case 'imagebased':
-				questions = await generateImageBasedQuestionsAI(category)
 				break
 			default:
 				return res.status(400).json({ error: 'Invalid game mode' })
@@ -949,65 +1078,6 @@ function generateFallbackQuestionsNoOptions(category) {
 	return questions
 }
 
-// Generate image-based questions via AI with search query
-async function generateImageBasedQuestionsAI(category) {
-	try {
-		const ai = await geminiService.generateImageQuestions(category)
-		if (ai && ai.content && Array.isArray(ai.content.questions)) {
-			const transformed = ai.content.questions.map((q, index) => {
-				const query = q.image_search_query || q.imageSearchQuery || q.image_query || q.search_query || q.searchQuery || q.query || q.image || ''
-				return ({
-					id: `img_${Date.now()}_${index}`,
-					question: q.question,
-					options: q.options,
-					correctAnswer: q.correct_answer,
-					difficulty: q.difficulty_level,
-					explanation: q.explanation,
-					category,
-					questionNumber: index + 1,
-					prizeValue: PRIZE_STRUCTURE[index],
-					imageQuery: String(query || category).toLowerCase()
-				})
-			})
-			
-			// Store new questions in database and manage the 100 question limit
-			await storeQuestionsAndManageLimit(category, transformed)
-			
-			return transformed
-		}
-		throw new Error('Invalid image AI response')
-	} catch (e) {
-		console.error('Image mode generation failed, using simple fallback')
-		return generateImageBasedQuestions(category)
-	}
-}
-
-// Generate image-based questions
-function generateImageBasedQuestions(category) {
-	const questions = []
-	
-	for (let i = 0; i < 15; i++) {
-		questions.push({
-			id: `img${i + 1}`,
-			question: `Look at the image and answer question ${i + 1} in ${category}?`,
-			options: {
-				A: `Image option A`,
-				B: `Image option B`,
-				C: `Image option C`,
-				D: `Image option D`
-			},
-			correctAnswer: 'A',
-			category,
-			difficulty: 'medium',
-			explanation: `Image-based question about ${category}`,
-			imageUrl: `https://via.placeholder.com/400x300/4F46E5/FFFFFF?text=Question+${i + 1}`,
-			questionNumber: i + 1,
-			prizeValue: [100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000, 250000, 500000, 1000000][i]
-		})
-	}
-	
-	return questions
-}
 
 // Game completion route
 app.post('/api/games/complete', authenticateToken, async (req, res) => {
@@ -1099,6 +1169,76 @@ app.post('/api/games/complete', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Error completing game:', error);
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Merge guest data into authenticated user
+app.post('/api/users/sync-guest', authenticateToken, async (req, res) => {
+    try {
+        const { games } = req.body;
+        if (!Array.isArray(games) || games.length === 0) {
+            return res.json({ success: true, message: 'No guest games to sync' });
+        }
+
+        await mongoService.connect();
+        const usersCollection = mongoService.getCollection('users');
+
+        const userId = new ObjectId(req.user.userId);
+        let totalScore = 0;
+        let highest = 0;
+        const modeAgg = {};
+        const nowIso = new Date().toISOString();
+
+        const normalizedGames = games.map(g => {
+            const score = Number(g.score) || 0;
+            totalScore += score;
+            if (score > highest) highest = score;
+            const mode = (g.gameMode || 'normal');
+            modeAgg[mode] = modeAgg[mode] || { gamesPlayed: 0, totalScore: 0, highestScore: 0, questionsAnswered: 0, lastPlayedAt: null, lastCategory: null };
+            modeAgg[mode].gamesPlayed += 1;
+            modeAgg[mode].totalScore += score;
+            if (score > (modeAgg[mode].highestScore || 0)) modeAgg[mode].highestScore = score;
+            modeAgg[mode].questionsAnswered += Number(g.questionsAnswered) || 0;
+            modeAgg[mode].lastPlayedAt = nowIso;
+            modeAgg[mode].lastCategory = g.category || null;
+            return {
+                gameId: new ObjectId(),
+                gameMode: mode,
+                category: g.category || null,
+                score,
+                questionsAnswered: Number(g.questionsAnswered) || 0,
+                playedAt: g.playedAt || nowIso
+            }
+        });
+
+        // Build dynamic updates
+        const incFields = { totalEarnings: totalScore, gamesPlayed: games.length };
+        const maxFields = { highestScore: highest };
+        const setFields = {};
+        for (const [mode, data] of Object.entries(modeAgg)) {
+            const d = data || {};
+            incFields[`stats.${mode}.gamesPlayed`] = (incFields[`stats.${mode}.gamesPlayed`] || 0) + (d.gamesPlayed || 0);
+            incFields[`stats.${mode}.totalScore`] = (incFields[`stats.${mode}.totalScore`] || 0) + (d.totalScore || 0);
+            incFields[`stats.${mode}.questionsAnswered`] = (incFields[`stats.${mode}.questionsAnswered`] || 0) + (d.questionsAnswered || 0);
+            maxFields[`stats.${mode}.highestScore`] = Math.max(maxFields[`stats.${mode}.highestScore`] || 0, d.highestScore || 0);
+            setFields[`stats.${mode}.lastPlayedAt`] = d.lastPlayedAt || null;
+            setFields[`stats.${mode}.lastCategory`] = d.lastCategory || null;
+        }
+
+        await usersCollection.updateOne(
+            { _id: userId },
+            {
+                $inc: incFields,
+                $max: maxFields,
+                $set: setFields,
+                $push: { gameHistory: { $each: normalizedGames, $slice: -50 } }
+            }
+        );
+
+        res.json({ success: true, message: 'Guest data merged', mergedGames: games.length, totalScore });
+    } catch (error) {
+        console.error('Guest sync error:', error);
+        res.status(500).json({ error: 'Failed to merge guest data' });
     }
 });
 
@@ -1327,51 +1467,6 @@ async function startServer() {
 if (!process.env.VERCEL) {
 startServer().catch(console.error);
 }
-
-// Image lookup (Pixabay) and redirect to a usable image URL
-app.get('/api/images/lookup', async (req, res) => {
-    try {
-        const query = (req.query.query || req.query.q || '').toString().trim()
-        if (!query) return res.status(400).json({ error: 'query is required' })
-
-        const apiKey = process.env.PIXABAY_API_KEY
-        let imageUrl = ''
-        if (apiKey) {
-            const url = `https://pixabay.com/api/?key=${apiKey}&q=${encodeURIComponent(query)}&image_type=photo&per_page=10&safesearch=true&orientation=horizontal`
-            const resp = await fetch(url)
-            if (!resp.ok) throw new Error(`Pixabay HTTP ${resp.status}`)
-            const data = await resp.json()
-            const hit = (data.hits && data.hits[0]) || null
-            imageUrl = hit?.largeImageURL || hit?.webformatURL || ''
-        }
-
-        if (!imageUrl) {
-            imageUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(query)}`
-        }
-
-        // Stream the image back to avoid redirect issues in some environments
-        const imgResp = await fetch(imageUrl)
-        if (!imgResp.ok) throw new Error(`Image fetch failed ${imgResp.status}`)
-        const contentType = imgResp.headers.get('content-type') || 'image/jpeg'
-        const buffer = Buffer.from(await imgResp.arrayBuffer())
-        res.set('Content-Type', contentType)
-        res.set('Cache-Control', 'public, max-age=86400')
-        return res.send(buffer)
-    } catch (e) {
-        console.error('Image lookup failed:', e.message)
-        try {
-            const fallback = `https://source.unsplash.com/800x600/?${encodeURIComponent(req.query.query || req.query.q || 'random')}`
-            const imgResp = await fetch(fallback)
-            const contentType = imgResp.headers.get('content-type') || 'image/jpeg'
-            const buffer = Buffer.from(await imgResp.arrayBuffer())
-            res.set('Content-Type', contentType)
-            res.set('Cache-Control', 'public, max-age=3600')
-            return res.send(buffer)
-        } catch (nestedErr) {
-            return res.status(500).json({ error: 'Image fetch error', details: nestedErr.message })
-        }
-    }
-})
 
 // Error handling middleware
 app.use((err, req, res, next) => {

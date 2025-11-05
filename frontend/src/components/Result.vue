@@ -2,24 +2,25 @@
   <div class="min-h-screen bg-neutral-950 p-4 flex items-center justify-center">
     <div class="max-w-2xl w-full text-center">
       <div v-if="quizStore.lastGameResult" class="card border-2 border-neutral-700 p-6">
-        <h1 class="text-2xl md:text-3xl font-bold text-white mb-3">
-          {{ quizStore.lastGameResult.isWin ? '🎉 Congratulations! 🎉' : '🏁 Game Over 🏁' }}
+        <h1 class="text-2xl md:text-3xl font-bold text-white mb-3 flex items-center justify-center gap-2">
+          <component :is="quizStore.lastGameResult.isWin ? PartyPopper : Flag" :size="32" />
+          {{ quizStore.lastGameResult.isWin ? 'Congratulations!' : 'Game Over' }}
         </h1>
         <p class="text-sm text-neutral-400 mb-6">You played on {{ quizStore.lastGameResult.mode }} mode in the {{ quizStore.lastGameResult.category }} category.</p>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div class="card-compact border-2 border-yellow-500/30 bg-yellow-500/5">
-            <div class="text-3xl mb-1">💰</div>
+            <div class="mb-1 flex justify-center"><Coins :size="32" class="text-yellow-400" /></div>
             <div class="text-xs text-neutral-300 mb-1">Final Score</div>
             <div class="text-lg font-bold text-yellow-400">{{ quizStore.lastGameResult.finalScore.toLocaleString() }} {{ quizStore.lastGameResult.mode === 'Rapid Fire' ? 'pts' : '$' }}</div>
           </div>
           <div class="card-compact border-2 border-blue-500/30 bg-blue-500/5">
-            <div class="text-3xl mb-1">✅</div>
+            <div class="mb-1 flex justify-center"><CheckCircle :size="32" class="text-blue-400" /></div>
             <div class="text-xs text-neutral-300 mb-1">Correct Answers</div>
             <div class="text-lg font-bold text-blue-400">{{ quizStore.lastGameResult.correctAnswers }}</div>
           </div>
           <div class="card-compact border-2 border-red-500/30 bg-red-500/5">
-            <div class="text-3xl mb-1">❌</div>
+            <div class="mb-1 flex justify-center"><XCircle :size="32" class="text-red-400" /></div>
             <div class="text-xs text-neutral-300 mb-1">Incorrect Answers</div>
             <div class="text-lg font-bold text-red-400">{{ quizStore.lastGameResult.incorrectAnswers }}</div>
           </div>
@@ -42,6 +43,7 @@
 import { useQuizStore } from '../stores/quiz';
 import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { Coins, CheckCircle, XCircle, PartyPopper, Flag } from 'lucide-vue-next';
 
 const quizStore = useQuizStore();
 const router = useRouter();

@@ -31,7 +31,7 @@ export interface GameMode {
 	name: string
 	timeLimit: number
 	lifelines: number
-	scoring: 'standard' | 'rapid' | 'exact' | 'visual'
+    scoring: 'standard' | 'rapid' | 'exact'
 }
 
 export const useQuizStore = defineStore('quiz', () => {
@@ -65,13 +65,6 @@ export const useQuizStore = defineStore('quiz', () => {
 			timeLimit: 45,
 			lifelines: 0,
 			scoring: 'exact'
-		},
-		{
-			id: 'imagebased',
-			name: 'Image Based',
-			timeLimit: 40,
-			lifelines: 0,
-			scoring: 'visual'
 		}
 	]
 
@@ -178,8 +171,6 @@ export const useQuizStore = defineStore('quiz', () => {
 				return basePoints * questionMultiplier * 2 // Double points for rapid fire
 			case 'exact':
 				return basePoints * questionMultiplier * 1.5 // Bonus for exact answers
-			case 'visual':
-				return basePoints * questionMultiplier * 1.2 // Slight bonus for visual questions
 			default:
 				return basePoints * questionMultiplier
 		}
@@ -227,16 +218,24 @@ export const useQuizStore = defineStore('quiz', () => {
 			};
 			lastGameResult.value = resultData;
 
-			await axios.post(`${API_BASE_URL}/games/complete`, {
-				finalScore: resultData.finalScore,
-				questionsAnswered,
-				gameMode: gameMode.value.id,
-				rapidFireScore: gameMode.value.id === 'rapidfire' ? resultData.finalScore : undefined,
-				category: category.value
-			});
-
-			// Fetch the latest user data to update stats everywhere
-			await userStore.fetchCurrentUser();
+        if (userStore.isGuest) {
+            userStore.addGuestGameRecord({
+                score: resultData.finalScore,
+                questionsAnswered,
+                gameMode: gameMode.value.id,
+                category: category.value,
+            })
+        } else {
+            await axios.post(`${API_BASE_URL}/games/complete`, {
+                finalScore: resultData.finalScore,
+                questionsAnswered,
+                gameMode: gameMode.value.id,
+                rapidFireScore: gameMode.value.id === 'rapidfire' ? resultData.finalScore : undefined,
+                category: category.value
+            });
+            // Fetch the latest user data to update stats everywhere
+            await userStore.fetchCurrentUser();
+        }
 
 		} catch (err) {
 			console.error('Error completing game:', err);

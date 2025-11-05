@@ -1,103 +1,123 @@
 <template>
-	<div class="min-h-screen bg-neutral-950 p-4">
-		<div class="max-w-4xl mx-auto">
+	<div class="min-h-screen bg-neutral-950 p-4 sm:p-6">
+		<div class="max-w-7xl mx-auto">
 			<!-- Header -->
-			<div class="flex items-center justify-between mb-6">
-				<div>
-					<h1 class="text-2xl md:text-3xl font-bold text-white">Welcome back, {{ userStore.currentUser?.username }}!</h1>
-					<p class="text-neutral-400 text-sm">Ready to win big today?</p>
+			<div class="mb-10">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                <div>
+                    <h1 class="text-4xl sm:text-5xl font-bold text-white mb-2">
+                        Welcome, <span class="text-yellow-400">{{ appStore.isGuest ? 'Guest' : (appStore.currentUser?.username || 'Guest') }}</span>
+                    </h1>
+						<p class="text-neutral-300 text-base font-medium">Ready to climb the leaderboard?</p>
+					</div>
+                <div class="flex items-center gap-3">
+                    <button v-if="appStore.isGuest" @click="router.push({ path: '/', query: { auth: '1' } })" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition">
+                        Sign In
+                    </button>
+                </div>
 				</div>
-				<button @click="logout" class="btn-secondary text-xs">Logout</button>
 			</div>
 
-			<!-- Stats Overview -->
-			<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-				<div class="card-compact border-2 border-indigo-500/30 bg-indigo-500/5 text-center">
-					<div class="text-3xl mb-1">💰</div>
-					<div class="text-xs text-neutral-300 mb-1">Total Earnings</div>
-					<div class="text-lg font-bold text-indigo-400">${{ userStore.currentUser?.totalEarnings?.toLocaleString() || 0 }}</div>
+			<!-- Main Stats Grid -->
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+				<!-- Total Earnings -->
+				<div class="p-6 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-yellow-500/50 transition-all duration-300">
+					<div class="flex items-center gap-2 mb-3">
+						<div class="p-2 bg-yellow-500/10 rounded-lg"><Coins :size="18" class="text-yellow-400" /></div>
+						<div class="text-sm text-neutral-300 font-semibold">Total Earnings</div>
+					</div>
+					<div class="text-3xl font-bold text-yellow-400 mb-2">{{ formatCurrency(appStore.currentUser?.totalEarnings || 0) }}</div>
+					<div class="text-xs text-neutral-400">{{ appStore.currentUser?.gamesPlayed || 0 }} games played</div>
 				</div>
-				<div class="card-compact border-2 border-green-500/30 bg-green-500/5 text-center">
-					<div class="text-3xl mb-1">🎮</div>
-					<div class="text-xs text-neutral-300 mb-1">Games Played</div>
-					<div class="text-lg font-bold text-green-400">{{ userStore.currentUser?.gamesPlayed || 0 }}</div>
+
+				<!-- Games Played -->
+				<div class="p-6 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-green-500/50 transition-all duration-300">
+					<div class="flex items-center gap-2 mb-3">
+						<div class="p-2 bg-green-500/10 rounded-lg"><Gamepad2 :size="18" class="text-green-400" /></div>
+						<div class="text-sm text-neutral-300 font-semibold">Games Played</div>
+					</div>
+					<div class="text-3xl font-bold text-green-400 mb-2">{{ appStore.currentUser?.gamesPlayed || 0 }}</div>
+					<div class="text-xs text-neutral-400">Avg: {{ getAverageScore() }}</div>
 				</div>
-				<div class="card-compact border-2 border-yellow-500/30 bg-yellow-500/5 text-center">
-					<div class="text-3xl mb-1">🏆</div>
-					<div class="text-xs text-neutral-300 mb-1">Best Score</div>
-					<div class="text-lg font-bold text-yellow-400">${{ userStore.currentUser?.highestScore?.toLocaleString() || 0 }}</div>
+
+				<!-- Best Score -->
+				<div class="p-6 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-purple-500/50 transition-all duration-300">
+					<div class="flex items-center gap-2 mb-3">
+						<div class="p-2 bg-purple-500/10 rounded-lg"><Trophy :size="18" class="text-purple-400" /></div>
+						<div class="text-sm text-neutral-300 font-semibold">Best Score</div>
+					</div>
+					<div class="text-3xl font-bold text-purple-400 mb-2">{{ formatCurrency(appStore.currentUser?.highestScore || 0) }}</div>
+					<div class="text-xs text-neutral-400">Personal best</div>
 				</div>
-				<div class="card-compact border-2 border-purple-500/30 bg-purple-500/5 text-center">
-					<div class="text-3xl mb-1">📈</div>
-					<div class="text-xs text-neutral-300 mb-1">Success Rate</div>
-					<div class="text-lg font-bold text-purple-400">{{ getWinRate() }}%</div>
+
+				<!-- Achievements -->
+				<div class="p-6 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-indigo-500/50 transition-all duration-300">
+					<div class="flex items-center gap-2 mb-3">
+						<div class="p-2 bg-indigo-500/10 rounded-lg"><Star :size="18" class="text-indigo-400" /></div>
+						<div class="text-sm text-neutral-300 font-semibold">Achievements</div>
+					</div>
+					<div class="text-3xl font-bold text-indigo-400 mb-2">{{ appStore.currentUser?.achievements?.length || 0 }}</div>
+					<div class="text-xs text-neutral-400 truncate" v-if="appStore.currentUser?.achievements?.length">{{ appStore.currentUser.achievements.join(', ') }}</div>
 				</div>
 			</div>
 
 			<!-- Quick Actions -->
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-				<router-link to="/setup" class="card border-2 border-indigo-500/50 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 hover:from-indigo-600/30 hover:to-purple-600/30 text-white p-4 text-center transition-all duration-200 hover:scale-105 group">
-					<div class="text-4xl mb-2 group-hover:animate-float">🎮</div>
-					<h3 class="text-lg font-bold mb-1">Start New Game</h3>
-					<p class="text-neutral-200 text-sm mb-2">Begin your journey to $1,000,000</p>
-					<div class="inline-flex items-center gap-1 text-indigo-300 font-medium text-xs">
-						Play Now <span class="group-hover:translate-x-1 transition-transform">→</span>
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+				<router-link to="/setup" class="p-6 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-indigo-500/50 transition-all duration-300 hover:shadow-lg">
+					<div class="mb-4 flex justify-center">
+						<div class="p-3 bg-indigo-500/10 rounded-lg"><Gamepad2 :size="32" class="text-indigo-400" /></div>
 					</div>
+					<h3 class="text-lg font-bold text-white mb-2">Play Now</h3>
+					<p class="text-neutral-400 text-sm">Start a new game and earn virtual money</p>
 				</router-link>
 
-				<router-link to="/leaderboard" class="card border-2 border-yellow-500/50 bg-gradient-to-br from-yellow-600/20 to-orange-600/20 hover:from-yellow-600/30 hover:to-orange-600/30 text-white p-4 text-center transition-all duration-200 hover:scale-105 group">
-					<div class="text-4xl mb-2 group-hover:animate-float">🏆</div>
-					<h3 class="text-lg font-bold mb-1">View Leaderboard</h3>
-					<p class="text-neutral-200 text-sm mb-2">See how you rank among others</p>
-					<div class="inline-flex items-center gap-1 text-yellow-300 font-medium text-xs">
-						Check Rankings <span class="group-hover:translate-x-1 transition-transform">→</span>
+				<router-link to="/leaderboard" class="p-6 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-yellow-500/50 transition-all duration-300 hover:shadow-lg">
+					<div class="mb-4 flex justify-center">
+						<div class="p-3 bg-yellow-500/10 rounded-lg"><Trophy :size="32" class="text-yellow-400" /></div>
 					</div>
+					<h3 class="text-lg font-bold text-white mb-2">Leaderboard</h3>
+					<p class="text-neutral-400 text-sm">See where you rank globally</p>
 				</router-link>
 
-				<router-link to="/statistics" class="card border-2 border-green-500/50 bg-gradient-to-br from-green-600/20 to-teal-600/20 hover:from-green-600/30 hover:to-teal-600/30 text-white p-4 text-center transition-all duration-200 hover:scale-105 group">
-					<div class="text-4xl mb-2 group-hover:animate-float">📊</div>
-					<h3 class="text-lg font-bold mb-1">My Statistics</h3>
-					<p class="text-neutral-200 text-sm mb-2">Check your detailed game stats</p>
-					<div class="inline-flex items-center gap-1 text-green-300 font-medium text-xs">
-						View My Stats <span class="group-hover:translate-x-1 transition-transform">→</span>
+				<router-link to="/statistics" class="p-6 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-green-500/50 transition-all duration-300 hover:shadow-lg">
+					<div class="mb-4 flex justify-center">
+						<div class="p-3 bg-green-500/10 rounded-lg"><BarChart3 :size="32" class="text-green-400" /></div>
 					</div>
+					<h3 class="text-lg font-bold text-white mb-2">Statistics</h3>
+					<p class="text-neutral-400 text-sm">View detailed game history</p>
 				</router-link>
-			</div>
-
-			<!-- Admin Section (if user is admin) -->
-			<div v-if="userStore.currentUser?.username === 'admin'" class="card mb-6">
-				<h3 class="text-base font-bold text-white mb-3">Admin Panel</h3>
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-					<button @click="viewQuestionStats" class="btn-secondary text-xs">
-						📊 View Question Stats
-					</button>
-					<button @click="cleanupQuestions" class="btn-secondary text-xs">
-						🧹 Cleanup Questions
-					</button>
-				</div>
 			</div>
 
 			<!-- Recent Activity -->
-			<div class="card">
-				<h3 class="text-base font-bold text-white mb-3">Recent Activity</h3>
-				<div v-if="userStore.currentUser?.gamesPlayed === 0" class="text-center text-neutral-400 py-6">
-					<div class="text-3xl mb-2">🎯</div>
-					<p class="text-sm">No games played yet. Start your first game!</p>
+			<div class="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
+				<h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+					<ScrollText :size="20" class="text-indigo-400" /> Recent Games
+				</h2>
+				<div v-if="!appStore.currentUser?.gameHistory || appStore.currentUser.gameHistory.length === 0" class="text-center py-12">
+					<div class="mb-3 flex justify-center"><Target :size="48" class="text-neutral-500" /></div>
+					<p class="text-neutral-400 mb-4">No games yet. Start your first game!</p>
+					<router-link to="/setup" class="inline-block px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition">
+						Play Now
+					</router-link>
 				</div>
-				<div v-else class="space-y-2">
-					<div class="flex items-center justify-between p-3 bg-neutral-800 rounded border border-neutral-700">
-						<div class="flex items-center gap-3">
-							<div class="w-8 h-8 bg-indigo-600 rounded-full grid place-items-center text-white text-sm font-bold">🎮</div>
-							<div>
-								<div class="font-medium text-white text-sm">Last Game</div>
-								<div class="text-xs text-neutral-400">Earned ${{ userStore.currentUser?.highestScore?.toLocaleString() || 0 }}</div>
+				<div v-else class="space-y-3">
+					<div v-for="(game, idx) in appStore.currentUser.gameHistory.slice(0, 5)" :key="idx" class="p-4 bg-neutral-800 border border-neutral-700 rounded-lg flex items-center justify-between hover:border-neutral-600 transition">
+						<div class="flex items-center gap-4 flex-1">
+							<div class="w-12 h-12 bg-indigo-500/10 border border-indigo-500/30 rounded-lg flex items-center justify-center">
+								<component :is="getGameModeIcon(game.gameMode)" :size="24" class="text-indigo-400" />
+							</div>
+							<div class="flex-1">
+								<div class="font-medium text-white text-sm">{{ game.category }}</div>
+								<div class="text-xs text-neutral-400">{{ getGameModeName(game.gameMode) }} • {{ formatDate(game.playedAt) }} • {{game.questionsAnswered}} Q</div>
 							</div>
 						</div>
 						<div class="text-right">
-							<div class="text-xs text-neutral-400">Best Score</div>
-							<div class="font-bold text-green-400 text-sm">${{ userStore.currentUser?.highestScore?.toLocaleString() || 0 }}</div>
+							<div class="font-bold text-lg text-yellow-400">{{ formatCurrency(game.score) }}</div>
 						</div>
 					</div>
+					<router-link to="/statistics" class="mt-4 text-sm text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1">
+						View all games <Rocket :size="14" />
+					</router-link>
 				</div>
 			</div>
 		</div>
@@ -106,61 +126,26 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { useUserStore } from '../stores/user'
+import { useAppStore } from '../stores/appStore'
+import { formatCurrency, formatDate } from '../utils/constants'
+import { Coins, Gamepad2, Trophy, Star, ScrollText, Target, Rocket, BarChart3 } from 'lucide-vue-next'
+import { getGameModeIcon } from '../utils/icons'
 
 const router = useRouter()
-const userStore = useUserStore()
+const appStore = useAppStore()
 
-const getWinRate = () => {
-	if (!userStore.currentUser?.gamesPlayed || userStore.currentUser.gamesPlayed === 0) return 0;
-	// A simple win is any game where the user earned more than $0.
-	const wins = userStore.currentUser.gameHistory?.filter(game => game.score > 0).length || 0;
-	return Math.round((wins / userStore.currentUser.gamesPlayed) * 100);
-}
-
-const logout = () => {
-	userStore.logout()
-	router.push('/login')
-}
-
-// Admin functions
-const viewQuestionStats = async () => {
-	try {
-		const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/questions/stats`)
-		const data = await response.json()
-		
-		if (data.success) {
-			console.log('Question Statistics:', data)
-			alert(`Total Categories: ${data.totalCategories}\nTotal Questions: ${data.totalQuestions}\n\nCheck console for detailed stats.`)
-		} else {
-			alert('Failed to fetch question stats')
-		}
-	} catch (error) {
-		console.error('Error fetching question stats:', error)
-		alert('Error fetching question stats')
+const getGameModeName = (mode: string) => {
+	switch(mode) {
+		case 'normal': return 'Normal'
+		case 'rapidfire': return 'Rapid Fire'
+		case 'nooptions': return 'No Options'
+		default: return mode
 	}
 }
 
-const cleanupQuestions = async () => {
-	if (!confirm('This will remove old questions to maintain the 100 question limit per category. Continue?')) {
-		return
-	}
-	
-	try {
-		const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/admin/questions/cleanup`, {
-			method: 'POST'
-		})
-		const data = await response.json()
-		
-		if (data.success) {
-			console.log('Cleanup Results:', data)
-			alert(`Cleanup completed!\n\nCheck console for detailed results.`)
-		} else {
-			alert('Failed to perform cleanup')
-		}
-	} catch (error) {
-		console.error('Error during cleanup:', error)
-		alert('Error during cleanup')
-	}
+const getAverageScore = () => {
+	const gamesPlayed = appStore.currentUser?.gamesPlayed || 0
+	const totalEarnings = appStore.currentUser?.totalEarnings || 0
+	return gamesPlayed > 0 ? formatCurrency(Math.round(totalEarnings / gamesPlayed)) : '$0'
 }
 </script>

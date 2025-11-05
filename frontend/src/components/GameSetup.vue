@@ -1,141 +1,119 @@
 <template>
-	<div class="min-h-screen bg-neutral-950 p-4">
+	<div class="min-h-screen bg-gradient-to-b from-neutral-950 via-neutral-900 to-neutral-950 p-4 sm:p-6">
 		<div class="max-w-4xl mx-auto">
 			<!-- Header -->
-			<div class="text-center mb-6">
-				<h1 class="text-2xl md:text-3xl font-bold text-white mb-2">🎮 Game Setup</h1>
-				<p class="text-sm text-neutral-400">Choose your challenge and become a millionaire!</p>
+			<div class="text-center mb-8">
+				<h1 class="text-3xl sm:text-4xl font-bold text-white mb-2 flex items-center justify-center gap-3"><Gamepad2 :size="40" /> Choose Your Challenge</h1>
+				<p class="text-neutral-400">Pick a mode and category to get started</p>
 			</div>
 
-			<!-- Login Required -->
-			<div v-if="!userStore.isLoggedIn" class="card text-center mb-6 border-2 border-red-500/30 bg-red-500/5">
-				<div class="text-4xl mb-2">🔒</div>
-				<h2 class="text-lg font-bold text-white mb-2">Access Required</h2>
-				<p class="text-neutral-300 mb-4 text-sm">Ready to win $1,000,000? Login to start your journey!</p>
-				<router-link to="/login" class="btn-primary px-6 py-2 text-sm font-medium">
-					🚀 Login / Register
-				</router-link>
+			<!-- Step 1: Game Mode Selection -->
+			<div class="mb-8">
+				<h2 class="text-xl font-bold text-white mb-4">1. Select Game Mode</h2>
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+					<button
+						v-for="mode in Object.values(GAME_MODES)"
+						:key="mode.id"
+						@click="selectedMode = mode.id"
+						:class="[
+							'p-6 rounded-xl border-2 transition duration-300 text-left group',
+							selectedMode === mode.id
+								? 'border-indigo-500 bg-indigo-600/20'
+								: 'border-neutral-700 hover:border-neutral-600 bg-neutral-800/40'
+						]"
+					>
+						<div class="mb-3 group-hover:scale-125 transition inline-block">
+							<component :is="getGameModeIcon(mode.id)" :size="48" class="text-indigo-400" />
+						</div>
+						<h3 class="font-bold text-white text-lg mb-1">{{ mode.name }}</h3>
+						<p class="text-neutral-400 text-sm mb-3">{{ mode.description }}</p>
+						<div class="flex items-center gap-2 flex-wrap">
+							<span class="text-xs px-2 py-1 rounded-full bg-yellow-600/20 text-yellow-300">
+								{{ mode.difficulty }}
+							</span>
+							<span class="text-xs text-neutral-500 flex items-center gap-1"><Clock :size="12" /> {{ mode.timeLimit }}s</span>
+							<span v-if="mode.lifelines > 0" class="text-xs text-neutral-500 flex items-center gap-1"><Brain :size="12" /> {{ mode.lifelines }} lifelines</span>
+						</div>
+					</button>
+				</div>
 			</div>
 
-			<!-- Game Setup Form -->
-			<div v-else class="space-y-6">
-				<!-- Game Mode Selection -->
-				<div class="card border-2 border-neutral-700">
-					<div class="text-center mb-4">
-						<h2 class="text-lg font-bold text-white mb-1">🎯 Choose Your Challenge</h2>
-						<p class="text-neutral-400 text-xs">Each mode offers a unique experience and different rewards</p>
-					</div>
-					<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-						<div
-							v-for="mode in gameModes"
-							:key="mode.id"
-							@click="selectedMode = mode.id"
-							:class="selectedMode === mode.id ? 'border-indigo-500 bg-indigo-600/20' : 'border-neutral-600 hover:border-indigo-400 hover:bg-indigo-600/10'"
-							class="p-4 rounded-lg border-2 cursor-pointer transition-colors duration-200 hover:scale-[1.02] group"
-						>
-							<div class="flex items-start gap-3">
-								<div class="text-3xl group-hover:scale-110 transition-transform duration-200">{{ mode.icon }}</div>
-								<div class="flex-1">
-									<h3 class="font-bold text-white text-base mb-1">{{ mode.name }}</h3>
-									<p class="text-neutral-300 text-xs mb-2 leading-relaxed">{{ mode.description }}</p>
-									<div class="flex items-center justify-between">
-										<div class="flex items-center gap-1">
-											<span class="text-xs text-neutral-500">Difficulty:</span>
-											<span class="text-xs font-bold px-2 py-1 rounded-full" :class="getDifficultyBadgeClass(mode.difficulty)">
-												{{ mode.difficulty }}
-											</span>
-										</div>
-										<div v-if="selectedMode === mode.id" class="text-indigo-400 text-lg">✓</div>
-									</div>
-								</div>
-							</div>
+			<!-- Step 2: Category Selection -->
+			<div v-if="selectedMode" class="mb-8">
+				<h2 class="text-xl font-bold text-white mb-4">2. Pick Your Category</h2>
+				<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+					<button
+						v-for="category in categories"
+						:key="category"
+						@click="selectedCategory = category"
+						:class="[
+							'p-4 rounded-lg border-2 transition text-center group',
+							selectedCategory === category
+								? 'border-indigo-500 bg-indigo-600/20'
+								: 'border-neutral-700 hover:border-neutral-600 bg-neutral-800/40'
+						]"
+					>
+						<div class="mb-2 group-hover:scale-125 transition inline-block flex justify-center">
+							<component :is="getCategoryIcon(category)" :size="32" class="text-indigo-400" />
 						</div>
-					</div>
-				</div>
-
-				<!-- Category Selection (only show if mode is selected) -->
-				<div v-if="selectedMode" class="card border-2 border-neutral-700">
-					<div class="text-center mb-4">
-						<h2 class="text-lg font-bold text-white mb-1">📚 Pick Your Domain</h2>
-						<p class="text-neutral-400 text-xs">Choose the category that excites you most</p>
-					</div>
-					<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-						<button
-							v-for="category in categories"
-							:key="category"
-							@click="selectedCategory = category"
-							:class="selectedCategory === category ? 'bg-indigo-600 border-indigo-500' : 'bg-neutral-800/80 border-neutral-600 hover:bg-neutral-700/80 hover:border-indigo-400'"
-							class="p-3 rounded-lg border-2 text-center transition-colors duration-200 hover:scale-105 group"
-						>
-							<div class="text-xl mb-1 group-hover:scale-110 transition-transform duration-200">
-								{{ getCategoryIcon(category) }}
-							</div>
-							<span class="font-bold text-white text-xs">{{ category }}</span>
-						</button>
-					</div>
-				</div>
-
-				<!-- Game Rules for Selected Mode -->
-				<div v-if="selectedMode" class="card mb-4">
-					<h3 class="text-base font-bold text-white mb-2">Mode Rules</h3>
-					<div class="space-y-2 text-xs text-neutral-300">
-						<div v-if="selectedMode === 'rapidfire'">
-							<p><strong>⚡ Rapid Fire Mode:</strong> Answer questions quickly with a time limit. No lifelines available.</p>
-							<ul class="list-disc list-inside ml-3 space-y-1">
-								<li>15 seconds per question</li>
-								<li>No lifelines</li>
-								<li>Double points for quick answers</li>
-								<li>Progressive difficulty</li>
-							</ul>
-						</div>
-						<div v-else-if="selectedMode === 'normal'">
-							<p><strong>🎯 Normal Mode:</strong> Classic quiz experience with all features.</p>
-							<ul class="list-disc list-inside ml-3 space-y-1">
-								<li>30 seconds per question</li>
-								<li>3 lifelines available</li>
-								<li>Standard scoring</li>
-								<li>Progressive difficulty</li>
-							</ul>
-						</div>
-						<div v-else-if="selectedMode === 'nooptions'">
-							<p><strong>🧠 No Options Mode:</strong> Test your knowledge without multiple choice.</p>
-							<ul class="list-disc list-inside ml-3 space-y-1">
-								<li>Type your answers</li>
-								<li>No lifelines</li>
-								<li>Triple points for correct answers</li>
-								<li>Progressive difficulty</li>
-							</ul>
-						</div>
-						<div v-else-if="selectedMode === 'imagebased'">
-							<p><strong>🖼️ Image Based Mode:</strong> Questions based on images and visual content.</p>
-							<ul class="list-disc list-inside ml-3 space-y-1">
-								<li>Visual recognition skills</li>
-								<li>2 lifelines available</li>
-								<li>Mixed question types</li>
-								<li>Progressive difficulty</li>
-							</ul>
-						</div>
-					</div>
-				</div>
-
-				<!-- Start Game Button -->
-				<div v-if="selectedMode && selectedCategory" class="text-center">
-					<button @click="testServer" class="btn-secondary px-4 py-2 text-sm font-medium mb-2">
-						🔧 Test Server Connection
+						<div class="text-sm font-medium text-white">{{ category }}</div>
 					</button>
-					<button @click="testQuiz" class="btn-secondary px-4 py-2 text-sm font-medium mb-2">
-						🧪 Test Quiz Generation
-					</button>
-					<button @click="startGame" :disabled="loading" class="btn-primary px-8 py-3 text-base font-medium">
-						<span v-if="loading" class="flex items-center gap-2">
+				</div>
+			</div>
+
+			<!-- Step 3: Mode Info & Start -->
+			<div v-if="selectedMode && selectedCategory" class="bg-neutral-800/40 border border-neutral-700 rounded-xl p-6 mb-8">
+				<div class="flex items-start justify-between mb-4">
+					<div>
+						<h3 class="font-bold text-white mb-1 text-lg">{{ GAME_MODES[selectedMode as keyof typeof GAME_MODES]?.name }}</h3>
+						<p class="text-neutral-400 text-sm">{{ selectedCategory }}</p>
+					</div>
+					<div><component :is="getCategoryIcon(selectedCategory)" :size="32" class="text-indigo-400" /></div>
+				</div>
+
+				<div class="bg-neutral-900/50 rounded-lg p-4 mb-6">
+					<h4 class="font-semibold text-white text-sm mb-3">Game Details:</h4>
+					<ul class="space-y-2">
+						<li v-for="detail in GAME_MODES[selectedMode as keyof typeof GAME_MODES]?.details" :key="detail" class="flex items-start gap-2 text-sm text-neutral-300">
+							<Check :size="16" class="text-indigo-400 mt-0.5 flex-shrink-0" />
+							<span>{{ detail }}</span>
+						</li>
+					</ul>
+				</div>
+
+				<div class="flex gap-3">
+					<button
+						@click="startGame"
+						:disabled="appStore.loading"
+						class="flex-1 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+					>
+						<span v-if="appStore.loading">
 							<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-							Generating AI Questions...
 						</span>
-						<span v-else>🚀 Start Game</span>
+						<span v-else><Rocket :size="18" /></span>
+						<span>{{ appStore.loading ? 'Starting...' : 'Start Game' }}</span>
 					</button>
-					<p v-if="loading" class="text-xs text-neutral-400 mt-2">
-						AI is creating fresh questions for you...
-					</p>
+					<button
+						@click="reset"
+						class="px-6 py-3 bg-neutral-700 hover:bg-neutral-600 text-white font-bold rounded-lg transition"
+					>
+						Reset
+					</button>
+				</div>
+
+				<div v-if="appStore.error" class="mt-4 p-3 bg-red-600/20 border border-red-600/30 rounded-lg text-red-300 text-sm">
+					{{ appStore.error }}
+				</div>
+			</div>
+
+			<!-- Prize Structure Reference -->
+			<div class="bg-neutral-800/30 border border-neutral-700 rounded-xl p-6">
+				<h3 class="font-bold text-white mb-4 text-lg flex items-center gap-2"><Coins :size="20" /> Prize Ladder</h3>
+				<div class="grid grid-cols-5 md:grid-cols-10 gap-2">
+					<div v-for="(prize, idx) in prizeStructure" :key="idx" class="text-center">
+						<div class="text-xs text-neutral-400 mb-1">Q{{ idx + 1 }}</div>
+						<div class="text-xs font-bold text-yellow-400">{{ formatCurrency(prize) }}</div>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -143,159 +121,44 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '../stores/user'
-import { useQuizStore } from '../stores/quiz'
+import { useAppStore } from '../stores/appStore'
+import { GAME_MODES, formatCurrency } from '../utils/constants'
+import { getCategoryIcon, getGameModeIcon } from '../utils/icons'
+import { Gamepad2, Coins, Clock, Brain, Rocket, Check } from 'lucide-vue-next'
 
 const router = useRouter()
-const userStore = useUserStore()
-const quizStore = useQuizStore()
+const appStore = useAppStore()
 
 const selectedMode = ref('')
 const selectedCategory = ref('')
-const loading = ref(false)
-const error = ref<string | null>('')
 
-const gameModes = [
-	{
-		id: 'normal',
-		name: 'Normal Mode',
-		description: 'Classic quiz experience with lifelines and standard timing',
-		icon: '🎯',
-		difficulty: 'medium'
-	},
-	{
-		id: 'rapidfire',
-		name: 'Rapid Fire',
-		description: 'Fast-paced questions with time pressure and no lifelines',
-		icon: '⚡',
-		difficulty: 'hard'
-	},
-	{
-		id: 'nooptions',
-		name: 'Without Options',
-		description: 'Type your answers without multiple choice options',
-		icon: '❓',
-		difficulty: 'very hard'
-	},
-	{
-		id: 'imagebased',
-		name: 'Image Based',
-		description: 'Visual questions based on images and visual content',
-		icon: '🖼️',
-		difficulty: 'hard'
-	}
-]
+const categories = computed(() => appStore.categories.length > 0 ? appStore.categories : ['General Knowledge', 'Science & Technology', 'History', 'Geography', 'Entertainment', 'Sports', 'Literature', 'Mathematics'])
+const prizeStructure = computed(() => appStore.prizeStructure.length > 0 ? appStore.prizeStructure : [100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000, 250000, 500000, 1000000])
 
-const categories = [
-	'General Knowledge',
-	'Science',
-	'History',
-	'Geography',
-	'Entertainment',
-	'Sports',
-	'Technology',
-	'Art',
-	'Music',
-	'Literature'
-]
-
-
-const getDifficultyBadgeClass = (difficulty: string) => {
-	switch (difficulty.toLowerCase()) {
-		case 'easy':
-			return 'bg-green-600/20 text-green-300 border-green-500/30'
-		case 'medium':
-			return 'bg-yellow-600/20 text-yellow-300 border-yellow-500/30'
-		case 'hard':
-			return 'bg-red-600/20 text-red-300 border-red-500/30'
-		default:
-			return 'bg-neutral-600/20 text-neutral-300 border-neutral-500/30'
-	}
-}
-
-const getCategoryIcon = (category: string) => {
-	const icons: Record<string, string> = {
-		'General Knowledge': '🧠',
-		'Science': '🔬',
-		'History': '📚',
-		'Geography': '🌍',
-		'Entertainment': '🎬',
-		'Sports': '⚽',
-		'Technology': '💻',
-		'Art': '🎨',
-		'Music': '🎵',
-		'Literature': '📖'
-	}
-	return icons[category] || '❓'
-}
+onMounted(() => {
+  if (appStore.categories.length === 0) {
+    appStore.fetchCategories()
+  }
+  if (appStore.prizeStructure.length === 0) {
+    appStore.fetchPrizeStructure()
+  }
+})
 
 const startGame = async () => {
 	if (!selectedMode.value || !selectedCategory.value) return
-	
 	try {
-		loading.value = true
-		error.value = null
-		
-		console.log('Starting quiz with:', { mode: selectedMode.value, category: selectedCategory.value })
-		
-		// Start the quiz using the quiz store
-		await quizStore.startQuiz(selectedCategory.value, selectedMode.value)
-		
-		console.log('Quiz started successfully, navigating to game...')
-		
-		// Navigate to game after successfully starting quiz
+		await appStore.startQuiz(selectedCategory.value, selectedMode.value)
 		router.push('/game')
-	} catch (err: any) {
-		console.error('Error starting quiz:', err)
-		error.value = err.message || 'Failed to start game'
-	} finally {
-		loading.value = false
+	} catch (err) {
+		// Error is set in store
 	}
 }
 
-const testServer = async () => {
-	try {
-		const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/test`)
-		const data = await response.json()
-		
-		console.log('Server test response:', data)
-		alert(`Server Status: ${data.message}\nGemini API Key: ${data.geminiKey}\nTimestamp: ${data.timestamp}`)
-    } catch (err) {
-        console.error('Server test failed:', err)
-        const message = err instanceof Error ? err.message : String(err)
-        alert(`Server test failed: ${message}`)
-	}
-}
-
-const testQuiz = async () => {
-	if (!selectedMode.value || !selectedCategory.value) return
-	
-	try {
-		const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/quizzes/test`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				category: selectedCategory.value,
-				mode: selectedMode.value
-			})
-		})
-		
-		const data = await response.json()
-		
-		if (data.success !== false) {
-			console.log('Test quiz response:', data)
-			alert(`Test Quiz Generated!\nQuestions: ${data.totalQuestions}\nMode: ${data.mode}\nCategory: ${data.category}\n\nCheck console for details.`)
-		} else {
-			alert(`Test quiz failed: ${data.error}`)
-		}
-    } catch (err) {
-        console.error('Test quiz failed:', err)
-        const message = err instanceof Error ? err.message : String(err)
-        alert(`Test quiz failed: ${message}`)
-	}
+const reset = () => {
+	selectedMode.value = ''
+	selectedCategory.value = ''
+	appStore.error = ''
 }
 </script>

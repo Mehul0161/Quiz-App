@@ -57,14 +57,7 @@
 						<div class="mb-6">
 							<h2 class="text-xl font-bold text-white mb-4 leading-relaxed">{{ currentQuestion?.question }}</h2>
 
-							<!-- Image for image-based mode -->
-							<div v-if="quizStore.gameMode?.id === 'imagebased'" class="mb-6">
-								<img
-									:src="getImageUrl((currentQuestion as any)?.imageQuery || quizStore.category)"
-									:alt="(currentQuestion as any)?.imageQuery || quizStore.category"
-									class="w-full max-w-lg mx-auto rounded-xl border-2 border-neutral-600 shadow-lg"
-								/>
-							</div>
+                            
 
 							<!-- Answer Options -->
 							<div v-if="currentQuestion?.options && quizStore.gameMode?.id !== 'nooptions'" class="space-y-3">
@@ -109,15 +102,17 @@
 						<div v-if="answered" class="mt-6 p-4 rounded-xl border-2 shadow-lg" :class="isCorrect ? 'bg-green-600/20 border-green-500' : 'bg-red-600/20 border-red-500'">
 							<div class="flex items-center justify-between w-full">
 								<div class="flex items-center gap-4">
-									<div class="text-3xl">{{ isCorrect ? '✅' : '❌' }}</div>
+									<div class="flex justify-center">
+										<component :is="isCorrect ? CheckCircle : XCircle" :size="48" :class="isCorrect ? 'text-green-400' : 'text-red-400'" />
+									</div>
 									<div>
 										<h3 class="font-bold text-white text-lg mb-1">{{ isCorrect ? 'Correct!' : 'Incorrect!' }}</h3>
 										<p class="text-neutral-300 text-sm">{{ currentQuestion?.explanation }}</p>
 									</div>
 								</div>
 								<div class="flex items-center gap-3">
-									<button @click="walkAway" class="btn-secondary py-2 px-4 text-sm font-semibold">
-										💰 Walk Away
+									<button @click="walkAway" class="btn-secondary py-2 px-4 text-sm font-semibold flex items-center gap-2">
+										<Coins :size="16" /> Walk Away
 									</button>
 									<button @click="nextQuestion" class="btn-primary py-2 px-4 text-sm font-semibold">
 										{{ isLastQuestion ? 'Finish' : 'Next →' }}
@@ -139,7 +134,9 @@
 								class="p-2 md:p-3 rounded-xl border-2 transition-all duration-300 text-center hover:scale-105 transform"
 								:class="lifeline.used ? 'border-neutral-600 bg-neutral-800 text-neutral-500 cursor-not-allowed' : 'border-indigo-500 bg-indigo-600/20 text-white hover:bg-indigo-600/30 hover:shadow-lg'"
 							>
-								<div class="text-xl md:text-2xl mb-1">{{ lifeline.icon }}</div>
+								<div class="mb-1 flex justify-center">
+									<component :is="lifeline.icon" :size="24" :class="lifeline.used ? 'text-neutral-500' : 'text-white'" />
+								</div>
 								<div class="font-semibold text-xs md:text-sm">{{ lifeline.name }}</div>
 							</button>
 						</div>
@@ -149,9 +146,7 @@
 				<!-- Right Column: Prize Ladder (1/3 width) -->
 				<div class="flex-[1] min-w-[280px] max-w-[450px] xl:max-w-none">
 					<div class="card p-4 shadow-lg border-2 border-neutral-700 h-fit">
-						<h3 class="text-lg font-bold text-white mb-3 text-center">
-							{{ quizStore.gameMode?.id === 'rapidfire' ? 'Rapid Fire Rewards' : 'Prize Ladder' }}
-						</h3>
+                        <h3 class="text-lg font-bold text-white mb-3 text-center">Prize Ladder</h3>
 						<div class="space-y-1.5 max-h-[70vh] overflow-y-auto custom-scrollbar pr-1">
 							<!-- Rapid Fire Prize Ladder -->
 							<div v-if="quizStore.gameMode?.id === 'rapidfire'">
@@ -163,17 +158,17 @@
 								>
 									<div class="flex items-center gap-2">
 										<div class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold shadow-sm" :class="getRapidFirePrizeNumberClass(prize)">
-											🏆
+											<Trophy :size="16" />
 										</div>
 										<span class="font-bold text-xs" :class="getRapidFirePrizeTextClass(prize)">{{ prize }} Points</span>
 									</div>
 									<div class="flex items-center">
-										<div v-if="rapidFireScore >= prize" class="text-base text-green-400">✅</div>
+										<div v-if="rapidFireScore >= prize"><CheckCircle :size="16" class="text-green-400" /></div>
 									</div>
 								</div>
 							</div>
-							<!-- Standard Prize Ladder -->
-							<div v-else>
+                            <!-- Standard Prize Ladder -->
+                            <div>
 								<div
 									v-for="(prize, index) in prizeStructure"
 									:key="index"
@@ -187,8 +182,8 @@
 										<span class="font-bold text-xs" :class="getPrizeTextClass(index)">${{ prize.toLocaleString() }}</span>
 									</div>
 									<div class="flex items-center">
-										<div v-if="prizeStructure.length - 1 - index === currentQuestionIndex" class="text-base animate-pulse">🎯</div>
-										<div v-else-if="prizeStructure.length - 1 - index < currentQuestionIndex" class="text-base text-green-400">✅</div>
+										<div v-if="prizeStructure.length - 1 - index === currentQuestionIndex" class="animate-pulse"><Target :size="16" class="text-yellow-400" /></div>
+										<div v-else-if="prizeStructure.length - 1 - index < currentQuestionIndex"><CheckCircle :size="16" class="text-green-400" /></div>
 									</div>
 								</div>
 							</div>
@@ -213,7 +208,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuizStore } from '../stores/quiz'
-import { API_BASE_URL } from '../config'
+import { Coins, Trophy, Target, Scissors, Users, Phone, CheckCircle, XCircle } from 'lucide-vue-next'
+ 
 
 const router = useRouter()
 const quizStore = useQuizStore()
@@ -267,21 +263,21 @@ const availableLifelines = computed(() => {
 		{
 			id: '50-50',
 			name: '50:50',
-			icon: '✂️',
+			icon: Scissors,
 			description: 'Remove two wrong answers',
 			used: false
 		},
 		{
 			id: 'audience',
 			name: 'Audience',
-			icon: '👥',
+			icon: Users,
 			description: 'See audience poll results',
 			used: false
 		},
 		{
 			id: 'friend',
 			name: 'Friend',
-			icon: '📞',
+			icon: Phone,
 			description: 'Get advice from a friend',
 			used: false
 		}
@@ -618,6 +614,5 @@ const apply5050Lifeline = () => {
 	hiddenOptions.value = [...optionsToHide]
 }
 
-// Build image URL via backend API so it works in dev/prod
-const getImageUrl = (query: string) => `${API_BASE_URL}/images/lookup?query=${encodeURIComponent(query)}`
+ 
 </script>

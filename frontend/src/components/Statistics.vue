@@ -24,22 +24,22 @@
         <!-- Key Stats Cards -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           <div class="card-compact p-3 text-center border-2 border-yellow-500/30 bg-yellow-500/5">
-            <div class="text-3xl mb-1">💰</div>
+            <div class="mb-1 flex justify-center"><Coins :size="32" class="text-yellow-400" /></div>
             <div class="text-xs text-neutral-300">Total Earnings</div>
             <div class="text-lg font-bold text-yellow-400">${{ userStats.totalEarnings?.toLocaleString() || 0 }}</div>
           </div>
           <div class="card-compact p-3 text-center border-2 border-blue-500/30 bg-blue-500/5">
-            <div class="text-3xl mb-1">🎮</div>
+            <div class="mb-1 flex justify-center"><Gamepad2 :size="32" class="text-blue-400" /></div>
             <div class="text-xs text-neutral-300">Games Played</div>
             <div class="text-lg font-bold text-blue-400">{{ userStats.gamesPlayed || 0 }}</div>
           </div>
           <div class="card-compact p-3 text-center border-2 border-green-500/30 bg-green-500/5">
-            <div class="text-3xl mb-1">🏆</div>
+            <div class="mb-1 flex justify-center"><Trophy :size="32" class="text-green-400" /></div>
             <div class="text-xs text-neutral-300">Highest Score</div>
             <div class="text-lg font-bold text-green-400">${{ userStats.highestScore?.toLocaleString() || 0 }}</div>
           </div>
           <div class="card-compact p-3 text-center border-2 border-purple-500/30 bg-purple-500/5">
-            <div class="text-3xl mb-1">📈</div>
+            <div class="mb-1 flex justify-center"><TrendingUp :size="32" class="text-purple-400" /></div>
             <div class="text-xs text-neutral-300">Win Rate</div>
             <div class="text-lg font-bold text-purple-400">{{ getWinRate() }}%</div>
           </div>
@@ -49,7 +49,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div v-for="(stats, mode) in getModeStats()" :key="mode" class="card p-4 border-2 border-neutral-700">
             <div class="flex items-center gap-2 mb-3">
-              <div class="text-2xl">{{ getGameModeIcon(mode) }}</div>
+              <component :is="getGameModeIcon(mode)" :size="24" class="text-indigo-400" />
               <h3 class="text-base font-bold text-white">{{ getModeName(mode) }}</h3>
             </div>
             <div class="grid grid-cols-2 gap-3">
@@ -84,8 +84,8 @@
             <div v-for="game in userStats.gameHistory.slice().reverse()" :key="game.gameId"
                  class="flex items-center justify-between p-3 bg-neutral-800/60 rounded border border-neutral-700 hover:bg-neutral-800 transition-colors">
               <div class="flex items-center gap-3">
-                <div class="text-2xl">
-                  {{ getGameModeIcon(game.gameMode) }}
+                <div>
+                  <component :is="getGameModeIcon(game.gameMode)" :size="24" class="text-indigo-400" />
                 </div>
                 <div>
                   <div class="font-bold text-white text-sm">{{ game.category }}</div>
@@ -99,7 +99,7 @@
             </div>
           </div>
           <div v-else class="text-center text-neutral-400 py-10">
-            <div class="text-5xl mb-3">🎯</div>
+            <div class="mb-3 flex justify-center"><Target :size="64" class="text-neutral-500" /></div>
             <p>No games played yet. Let's change that!</p>
           </div>
         </div>
@@ -111,7 +111,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useUserStore } from '../stores/user';
-import LoadingSpinner from './LoadingSpinner.vue'; // Assuming you have this component
+import LoadingSpinner from './LoadingSpinner.vue';
+import { Coins, Gamepad2, Trophy, TrendingUp, Target } from 'lucide-vue-next';
+import { getGameModeIcon } from '../utils/icons';
 
 const userStore = useUserStore();
 const userStats = computed(() => userStore.currentUser);
@@ -133,16 +135,7 @@ const fetchUserStats = async () => {
   }
 };
 
-const getGameModeIcon = (mode: string | number) => {
-  const modeStr = String(mode);
-  switch(modeStr) {
-    case 'normal': return '🧠';
-    case 'rapidfire': return '🔥';
-    case 'nooptions': return '✍️';
-    case 'imagebased': return '🖼️';
-    default: return '🎮';
-  }
-};
+// getGameModeIcon is now imported from utils/icons
 
 const getModeName = (mode: string | number) => {
   const modeStr = String(mode);

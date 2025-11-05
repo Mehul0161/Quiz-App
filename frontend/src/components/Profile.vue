@@ -2,33 +2,34 @@
 	<div class="min-h-screen bg-neutral-950 p-4">
 		<div class="max-w-4xl mx-auto">
 			<!-- Header -->
-			<div class="text-center mb-6">
-				<div class="w-20 h-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full grid place-items-center text-white text-2xl font-bold shadow-lg mx-auto mb-3">
-					{{ userStore.currentUser?.username.charAt(0).toUpperCase() }}
-				</div>
-				<h1 class="text-2xl md:text-3xl font-bold text-white mb-1">{{ userStore.currentUser?.username }}</h1>
-				<p class="text-neutral-400 text-sm">Member since {{ formatDate(userStore.currentUser?.createdAt) }}</p>
-			</div>
+            <div class="text-center mb-6">
+                <div class="w-20 h-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full grid place-items-center text-white text-2xl font-bold shadow-lg mx-auto mb-3">
+                    {{ (appStore.isGuest ? 'G' : (appStore.currentUser?.username?.charAt(0) || 'U')).toUpperCase() }}
+                </div>
+                <h1 class="text-2xl md:text-3xl font-bold text-white mb-1">{{ appStore.isGuest ? 'Guest' : (appStore.currentUser?.username || 'Guest') }}</h1>
+                <p v-if="!appStore.isGuest" class="text-neutral-400 text-sm">Member since {{ formatDate(appStore.currentUser?.createdAt) }}</p>
+                <p v-else class="text-neutral-400 text-sm">Browsing as Guest</p>
+            </div>
 
 			<!-- Stats Grid -->
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
 				<div class="card-compact border-2 border-yellow-500/30 bg-yellow-500/5 text-center">
-					<div class="text-3xl mb-1">💰</div>
+					<div class="mb-1 flex justify-center"><Coins :size="32" class="text-yellow-400" /></div>
 					<div class="text-xs text-neutral-300 mb-1">Total Earnings</div>
-					<div class="text-lg font-bold text-yellow-400">${{ userStore.currentUser?.totalEarnings?.toLocaleString() || 0 }}</div>
+                    <div class="text-lg font-bold text-yellow-400">${{ (appStore.isGuest ? guestTotals.totalEarnings : (appStore.currentUser?.totalEarnings || 0)) .toLocaleString() }}</div>
 				</div>
 				<div class="card-compact border-2 border-blue-500/30 bg-blue-500/5 text-center">
-					<div class="text-3xl mb-1">🎮</div>
+					<div class="mb-1 flex justify-center"><Gamepad2 :size="32" class="text-blue-400" /></div>
 					<div class="text-xs text-neutral-300 mb-1">Games Played</div>
-					<div class="text-lg font-bold text-blue-400">{{ userStore.currentUser?.gamesPlayed || 0 }}</div>
+                    <div class="text-lg font-bold text-blue-400">{{ appStore.isGuest ? guestTotals.gamesPlayed : (appStore.currentUser?.gamesPlayed || 0) }}</div>
 				</div>
 				<div class="card-compact border-2 border-green-500/30 bg-green-500/5 text-center">
-					<div class="text-3xl mb-1">🏆</div>
+					<div class="mb-1 flex justify-center"><Trophy :size="32" class="text-green-400" /></div>
 					<div class="text-xs text-neutral-300 mb-1">Best Score</div>
-					<div class="text-lg font-bold text-green-400">${{ userStore.currentUser?.highestScore?.toLocaleString() || 0 }}</div>
+                    <div class="text-lg font-bold text-green-400">${{ (appStore.isGuest ? guestTotals.highestScore : (appStore.currentUser?.highestScore || 0)).toLocaleString() }}</div>
 				</div>
 				<div class="card-compact border-2 border-purple-500/30 bg-purple-500/5 text-center">
-					<div class="text-3xl mb-1">📈</div>
+					<div class="mb-1 flex justify-center"><TrendingUp :size="32" class="text-purple-400" /></div>
 					<div class="text-xs text-neutral-300 mb-1">Win Rate</div>
 					<div class="text-lg font-bold text-purple-400">{{ getWinRate() }}%</div>
 				</div>
@@ -37,54 +38,66 @@
 			<!-- Game History -->
 			<div class="card">
 				<h3 class="text-lg font-bold text-white mb-3">Game History</h3>
-				<div v-if="!userStore.currentUser?.gameHistory || userStore.currentUser.gameHistory.length === 0" class="text-center text-neutral-400 py-6">
-					<div class="text-3xl mb-2">🎯</div>
+                <div v-if="(appStore.isGuest ? guestHistory.length === 0 : (!appStore.currentUser?.gameHistory || appStore.currentUser.gameHistory.length === 0))" class="text-center text-neutral-400 py-6">
+					<div class="mb-2 flex justify-center"><Target :size="48" class="text-neutral-500" /></div>
 					<p class="text-sm">No games played yet. Start your first game!</p>
 				</div>
-				<div v-else class="space-y-2">
-					<div v-for="(game, index) in userStore.currentUser.gameHistory.slice(0, 5)" :key="index" class="flex items-center justify-between p-3 bg-neutral-800 rounded border border-neutral-700">
+                <div v-else class="space-y-2">
+                    <div v-for="(game, index) in (appStore.isGuest ? guestHistory : appStore.currentUser!.gameHistory).slice(0, 5)" :key="index" class="flex items-center justify-between p-3 bg-neutral-800 rounded border border-neutral-700">
 						<div class="flex items-center gap-3">
-							<div class="w-8 h-8 bg-indigo-600 rounded-full grid place-items-center text-white text-sm font-bold">🎮</div>
+							<div class="w-8 h-8 bg-indigo-600 rounded-full grid place-items-center"><Gamepad2 :size="16" class="text-white" /></div>
 							<div>
 								<div class="font-medium text-white text-sm">Game {{ index + 1 }}</div>
-								<div class="text-xs text-neutral-400">Score: ${{ game.score?.toLocaleString() || 0 }}</div>
+                                <div class="text-xs text-neutral-400">Score: ${{ (game.score || 0).toLocaleString() }}</div>
 							</div>
 						</div>
 						<div class="text-right">
-							<div class="text-xs text-neutral-400">{{ formatDate(game.date) }}</div>
-							<div class="font-bold text-green-400 text-sm">${{ game.score?.toLocaleString() || 0 }}</div>
+                            <div class="text-xs text-neutral-400">{{ formatDate((game as any).playedAt || (game as any).date) }}</div>
+                            <div class="font-bold text-green-400 text-sm">${{ (game.score || 0).toLocaleString() }}</div>
 						</div>
 					</div>
 				</div>
 			</div>
 
 			<!-- Actions -->
-			<div class="flex justify-center gap-3 mt-6">
+			<div class="flex justify-center gap-3 mt-6 flex-wrap">
 				<router-link to="/setup" class="btn-primary">Start New Game</router-link>
 				<router-link to="/dashboard" class="btn-secondary">Back to Dashboard</router-link>
+				<button @click="handleLogout" class="px-6 py-2 bg-gradient-to-r from-neutral-700 to-neutral-800 hover:from-neutral-600 hover:to-neutral-700 text-white rounded-lg font-semibold border border-neutral-600/50 hover:border-neutral-500 transition-all duration-200 flex items-center gap-2">
+					<LogOut :size="18" /> Logout
+				</button>
 			</div>
 		</div>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '../stores/user'
+import { useAppStore } from '../stores/appStore'
+import { Coins, Gamepad2, Trophy, TrendingUp, Target, LogOut } from 'lucide-vue-next'
 
 const router = useRouter()
-const userStore = useUserStore()
+const appStore = useAppStore()
 
-onMounted(() => {
-  if (!userStore.isLoggedIn) {
-    router.push('/login')
-  }
+const guestHistory = computed(() => {
+  const raw = localStorage.getItem('quiz_guest_history')
+  return raw ? JSON.parse(raw) : []
+})
+
+const guestTotals = computed(() => {
+  const list = guestHistory.value
+  const gamesPlayed = list.length
+  const totalEarnings = list.reduce((sum: number, g: any) => sum + (g.score || 0), 0)
+  const highestScore = list.reduce((max: number, g: any) => Math.max(max, g.score || 0), 0)
+  return { gamesPlayed, totalEarnings, highestScore }
 })
 
 const getWinRate = () => {
-  if (!userStore.currentUser?.gamesPlayed || userStore.currentUser.gamesPlayed === 0) return 0
-  // Simple calculation - you can make this more sophisticated
-  return Math.round((userStore.currentUser.totalEarnings / (userStore.currentUser.gamesPlayed * 1000)) * 100)
+  const gamesPlayed = appStore.isGuest ? guestTotals.value.gamesPlayed : (appStore.currentUser?.gamesPlayed || 0)
+  const totalEarnings = appStore.isGuest ? guestTotals.value.totalEarnings : (appStore.currentUser?.totalEarnings || 0)
+  if (!gamesPlayed) return 0
+  return Math.round((totalEarnings / (gamesPlayed * 1000)) * 100)
 }
 
 const formatDate = (dateString?: string) => {
@@ -94,6 +107,11 @@ const formatDate = (dateString?: string) => {
     month: 'long',
     day: 'numeric'
   })
+}
+
+const handleLogout = () => {
+  appStore.logout()
+  router.push('/')
 }
 </script>
 
