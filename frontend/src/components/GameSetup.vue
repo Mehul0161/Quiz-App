@@ -262,9 +262,10 @@ const testServer = async () => {
 		
 		console.log('Server test response:', data)
 		alert(`Server Status: ${data.message}\nGemini API Key: ${data.geminiKey}\nTimestamp: ${data.timestamp}`)
-	} catch (error) {
-		console.error('Server test failed:', error)
-		alert(`Server test failed: ${error.message}`)
+    } catch (err) {
+        console.error('Server test failed:', err)
+        const message = err instanceof Error ? err.message : String(err)
+        alert(`Server test failed: ${message}`)
 	}
 }
 
@@ -291,9 +292,10 @@ const testQuiz = async () => {
 		} else {
 			alert(`Test quiz failed: ${data.error}`)
 		}
-	} catch (error) {
-		console.error('Test quiz failed:', error)
-		alert(`Test quiz failed: ${error.message}`)
+    } catch (err) {
+        console.error('Test quiz failed:', err)
+        const message = err instanceof Error ? err.message : String(err)
+        alert(`Test quiz failed: ${message}`)
 	}
 }
 </script>
