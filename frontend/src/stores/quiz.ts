@@ -226,15 +226,15 @@ export const useQuizStore = defineStore('quiz', () => {
                 category: category.value,
             })
         } else {
-            await axios.post(`${API_BASE_URL}/games/complete`, {
-                finalScore: resultData.finalScore,
-                questionsAnswered,
-                gameMode: gameMode.value.id,
-                rapidFireScore: gameMode.value.id === 'rapidfire' ? resultData.finalScore : undefined,
-                category: category.value
-            });
-            // Fetch the latest user data to update stats everywhere
-            await userStore.fetchCurrentUser();
+			await axios.post(`${API_BASE_URL}/games/complete`, {
+				finalScore: resultData.finalScore,
+				questionsAnswered,
+				gameMode: gameMode.value.id,
+				rapidFireScore: gameMode.value.id === 'rapidfire' ? resultData.finalScore : undefined,
+				category: category.value
+			});
+			// Fetch the latest user data to update stats everywhere
+			await userStore.fetchCurrentUser();
         }
 
 		} catch (err) {

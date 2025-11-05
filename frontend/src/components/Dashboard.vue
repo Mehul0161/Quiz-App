@@ -101,18 +101,21 @@
 					</router-link>
 				</div>
 				<div v-else class="space-y-3">
-					<div v-for="(game, idx) in appStore.currentUser.gameHistory.slice(0, 5)" :key="idx" class="p-4 bg-neutral-800 border border-neutral-700 rounded-lg flex items-center justify-between hover:border-neutral-600 transition">
+					<div v-for="(game, idx) in appStore.currentUser.gameHistory.slice().reverse().slice(0, 5)" :key="idx" class="p-4 bg-neutral-800 border border-neutral-700 rounded-lg flex items-center justify-between hover:border-neutral-600 transition">
 						<div class="flex items-center gap-4 flex-1">
 							<div class="w-12 h-12 bg-indigo-500/10 border border-indigo-500/30 rounded-lg flex items-center justify-center">
 								<component :is="getGameModeIcon(game.gameMode)" :size="24" class="text-indigo-400" />
 							</div>
 							<div class="flex-1">
 								<div class="font-medium text-white text-sm">{{ game.category }}</div>
-								<div class="text-xs text-neutral-400">{{ getGameModeName(game.gameMode) }} • {{ formatDate(game.playedAt) }} • {{game.questionsAnswered}} Q</div>
+								<div class="text-xs text-neutral-400">{{ getGameModeName(game.gameMode) }} • {{ formatDate(game.playedAt) }} • {{ game.questionsAnswered }} Q</div>
 							</div>
 						</div>
 						<div class="text-right">
-							<div class="font-bold text-lg text-yellow-400">{{ formatCurrency(game.score) }}</div>
+							<div class="font-bold text-lg" :class="game.gameMode === 'rapidfire' ? 'text-green-400' : 'text-yellow-400'">
+								{{ formatCurrency(game.score) }}
+							</div>
+							<div v-if="game.gameMode === 'rapidfire'" class="text-xs text-green-400">Rapid Fire</div>
 						</div>
 					</div>
 					<router-link to="/statistics" class="mt-4 text-sm text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1">

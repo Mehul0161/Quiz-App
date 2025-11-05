@@ -6,19 +6,19 @@
 				<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
 					<div class="flex-1">
 						<h1 class="text-xl md:text-2xl font-bold text-white mb-1">
-							<span v-if="quizStore.gameMode?.id === 'rapidfire'">
+							<span v-if="appStore.gameMode?.id === 'rapidfire'">
 								Rapid Fire Mode!
 							</span>
 							<span v-else>
 								Question {{ currentQuestionIndex + 1 }} of {{ totalQuestions }}
 							</span>
-							<span class="text-indigo-400 block sm:inline">- {{ quizStore.category }}</span>
+							<span class="text-indigo-400 block sm:inline">- {{ appStore.category }}</span>
 						</h1>
-						<p class="text-sm text-neutral-400">Mode: {{ quizStore.gameMode?.name }}</p>
+						<p class="text-sm text-neutral-400">Mode: {{ appStore.gameMode?.name }}</p>
 					</div>
 					<div class="text-left sm:text-right">
 						<!-- Rapid Fire Score Display -->
-						<div v-if="quizStore.gameMode?.id === 'rapidfire'" class="text-center">
+						<div v-if="appStore.gameMode?.id === 'rapidfire'" class="text-center">
 							<div class="text-xl md:text-2xl font-bold text-green-400 mb-1">{{ rapidFireScore }} pts</div>
 							<div class="text-sm text-neutral-400">
 								Time: <span :class="getTimeColor()">{{ formatTime(timeRemaining) }}</span>
@@ -27,7 +27,7 @@
 						<!-- Normal Prize Display -->
 						<div v-else>
 							<div class="text-xl md:text-2xl font-bold text-yellow-400 mb-1">${{ currentPrize.toLocaleString() }}</div>
-							<div v-if="quizStore.gameMode?.timeLimit" class="text-sm text-neutral-400">
+							<div v-if="appStore.gameMode?.timeLimit" class="text-sm text-neutral-400">
 								Time: <span :class="getTimeColor()">{{ formatTime(timeRemaining) }}</span>
 							</div>
 						</div>
@@ -35,12 +35,12 @@
 				</div>
 
 				<!-- Timer Bar -->
-				<div v-if="quizStore.gameMode?.timeLimit" class="mt-4">
+				<div v-if="appStore.gameMode?.timeLimit" class="mt-4">
 					<div class="w-full bg-neutral-800 rounded-full h-2 shadow-inner">
 						<div
 							class="h-2 rounded-full transition-all duration-1000 shadow-sm"
 							:class="getTimeBarColor()"
-							:style="{ width: (timeRemaining / quizStore.gameMode.timeLimit * 100) + '%' }"
+							:style="{ width: (timeRemaining / appStore.gameMode.timeLimit * 100) + '%' }"
 						></div>
 					</div>
 				</div>
@@ -60,7 +60,7 @@
                             
 
 							<!-- Answer Options -->
-							<div v-if="currentQuestion?.options && quizStore.gameMode?.id !== 'nooptions'" class="space-y-3">
+							<div v-if="currentQuestion?.options && appStore.gameMode?.id !== 'nooptions'" class="space-y-3">
 								<button
 									v-for="(option, key) in currentQuestion.options"
 									:key="key"
@@ -76,7 +76,7 @@
 							</div>
 
 							<!-- Text Input (for no-options mode) -->
-							<div v-else-if="quizStore.gameMode?.id === 'nooptions'" class="space-y-4">
+							<div v-else-if="appStore.gameMode?.id === 'nooptions'" class="space-y-4">
 								<div>
 									<label class="block text-sm font-medium text-neutral-200 mb-2">Your Answer:</label>
 									<input
@@ -123,7 +123,7 @@
 					</div>
 
 					<!-- Lifelines Card -->
-					<div v-if="quizStore.gameMode?.lifelines && quizStore.gameMode.lifelines > 0 && quizStore.gameMode?.id === 'normal'" class="card p-4 shadow-lg border-2 border-neutral-700">
+					<div v-if="appStore.gameMode?.lifelines && appStore.gameMode.lifelines > 0 && appStore.gameMode?.id === 'normal'" class="card p-4 shadow-lg border-2 border-neutral-700">
 						<h3 class="text-lg font-bold text-white mb-4 text-center">Lifelines</h3>
 						<div class="grid grid-cols-3 gap-2 md:gap-3">
 							<button
@@ -149,7 +149,7 @@
                         <h3 class="text-lg font-bold text-white mb-3 text-center">Prize Ladder</h3>
 						<div class="space-y-1.5 max-h-[70vh] overflow-y-auto custom-scrollbar pr-1">
 							<!-- Rapid Fire Prize Ladder -->
-							<div v-if="quizStore.gameMode?.id === 'rapidfire'">
+							<div v-if="appStore.gameMode?.id === 'rapidfire'">
 								<div
 									v-for="(prize, index) in rapidFirePrizeStructure.slice().reverse()"
 									:key="index"
@@ -177,7 +177,7 @@
 								>
 									<div class="flex items-center gap-2">
 										<div class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold shadow-sm" :class="getPrizeNumberClass(index)">
-											{{ prizeStructure.length - index }}
+											{{ getPrizeLetter(index) }}
 										</div>
 										<span class="font-bold text-xs" :class="getPrizeTextClass(index)">${{ prize.toLocaleString() }}</span>
 									</div>
@@ -207,15 +207,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useQuizStore } from '../stores/quiz'
+import { useAppStore } from '../stores/appStore'
 import { Coins, Trophy, Target, Scissors, Users, Phone, CheckCircle, XCircle } from 'lucide-vue-next'
  
 
 const router = useRouter()
-const quizStore = useQuizStore()
+const appStore = useAppStore()
 
 // Expose the rapid fire prize structure to the template
-const rapidFirePrizeStructure = computed(() => quizStore.rapidFirePrizeStructure);
+const rapidFirePrizeStructure = computed(() => appStore.rapidFirePrizeStructure);
 
 const answered = ref(false)
 const isCorrect = ref(false)
@@ -233,31 +233,31 @@ const DOUBLE_CLICK_DELAY = 500 // 500ms
 
 let timer: ReturnType<typeof setInterval> | null = null
 
-const currentQuestionIndex = computed(() => quizStore.currentQuestionIndex)
-const totalQuestions = computed(() => quizStore.totalQuestions)
-const currentQuestion = computed(() => quizStore.currentQuestion)
-const prizeStructure = computed(() => quizStore.prizeStructure.slice().reverse()) // Reversed for display
+const currentQuestionIndex = computed(() => appStore.currentQuestionIndex)
+const totalQuestions = computed(() => appStore.questions.length)
+const currentQuestion = computed(() => appStore.questions[appStore.currentQuestionIndex])
+const prizeStructure = computed(() => appStore.prizeStructure.slice().reverse()) // Reversed for display
 
 const currentPrize = computed(() => {
-	if (quizStore.gameMode?.id === 'rapidfire') {
+	if (appStore.gameMode?.id === 'rapidfire') {
 		// Find the highest prize achieved based on score
 		const currentScore = rapidFireScore.value;
-		return [...quizStore.rapidFirePrizeStructure].reverse().find(prize => currentScore >= prize) || 0;
+		return [...appStore.rapidFirePrizeStructure].reverse().find(prize => currentScore >= prize) || 0;
 	}
 
 	if (answered.value && !isCorrect.value) {
 		// Find safe haven
-		if (currentQuestionIndex.value >= 10) return quizStore.prizeStructure[9]
-		if (currentQuestionIndex.value >= 5) return quizStore.prizeStructure[4]
+		if (currentQuestionIndex.value >= 10) return appStore.prizeStructure[9]
+		if (currentQuestionIndex.value >= 5) return appStore.prizeStructure[4]
 		return 0
 	}
-	return currentQuestionIndex.value > 0 ? quizStore.prizeStructure[currentQuestionIndex.value - 1] : 0
+	return currentQuestionIndex.value > 0 ? appStore.prizeStructure[currentQuestionIndex.value - 1] : 0
 })
 
 const isLastQuestion = computed(() => currentQuestionIndex.value === totalQuestions.value - 1)
 
 const availableLifelines = computed(() => {
-	if (!quizStore.gameMode?.lifelines) return []
+	if (!appStore.gameMode?.lifelines) return []
 	
 	const lifelines = [
 		{
@@ -283,16 +283,21 @@ const availableLifelines = computed(() => {
 		}
 	]
 	
-	return lifelines.slice(0, quizStore.gameMode.lifelines)
+	return lifelines.slice(0, appStore.gameMode.lifelines)
 })
 
 onMounted(() => {
-	if (!quizStore.gameMode) {
+	if (!appStore.gameMode || !appStore.questions || appStore.questions.length === 0) {
+		console.warn('Game mode or questions missing, redirecting to setup', {
+			gameMode: appStore.gameMode,
+			questionsCount: appStore.questions?.length || 0
+		})
 		router.push('/setup')
 		return
 	}
 	
-  startTimer()
+	console.log('QuizGame mounted with', appStore.questions.length, 'questions')
+	startTimer()
 })
 
 onUnmounted(() => {
@@ -300,9 +305,9 @@ onUnmounted(() => {
 })
 
 const startTimer = () => {
-	if (!quizStore.gameMode?.timeLimit) return
+	if (!appStore.gameMode?.timeLimit) return
 	
-	timeRemaining.value = quizStore.gameMode.timeLimit
+	timeRemaining.value = appStore.gameMode.timeLimit
 	timer = setInterval(() => {
 		timeRemaining.value--
 		if (timeRemaining.value <= 0) {
@@ -313,7 +318,7 @@ const startTimer = () => {
 
 const timeUp = () => {
 	if (timer) clearInterval(timer);
-	if (quizStore.gameMode?.id === 'rapidfire') {
+	if (appStore.gameMode?.id === 'rapidfire') {
 		completeGame();
 	} else {
 		// For normal modes, end the game when time runs out
@@ -392,7 +397,7 @@ const getPrizeTextClass = (index: number) => {
 }
 
 const getRapidFirePrizeClass = (prize: number) => {
-	const nextPrize = [...quizStore.rapidFirePrizeStructure].find(p => p > rapidFireScore.value) || Infinity;
+	const nextPrize = [...appStore.rapidFirePrizeStructure].find(p => p > rapidFireScore.value) || Infinity;
 	if (rapidFireScore.value >= prize) {
 		return 'bg-green-600/20 border-green-500 shadow-green-500/20 shadow-md';
 	}
@@ -403,7 +408,7 @@ const getRapidFirePrizeClass = (prize: number) => {
 };
 
 const getRapidFirePrizeNumberClass = (prize: number) => {
-	const nextPrize = [...quizStore.rapidFirePrizeStructure].find(p => p > rapidFireScore.value) || Infinity;
+	const nextPrize = [...appStore.rapidFirePrizeStructure].find(p => p > rapidFireScore.value) || Infinity;
 	if (rapidFireScore.value >= prize) {
 		return 'bg-green-600 text-white';
 	}
@@ -414,7 +419,7 @@ const getRapidFirePrizeNumberClass = (prize: number) => {
 };
 
 const getRapidFirePrizeTextClass = (prize: number) => {
-	const nextPrize = [...quizStore.rapidFirePrizeStructure].find(p => p > rapidFireScore.value) || Infinity;
+	const nextPrize = [...appStore.rapidFirePrizeStructure].find(p => p > rapidFireScore.value) || Infinity;
 	if (rapidFireScore.value >= prize) {
 		return 'text-green-300';
 	}
@@ -424,6 +429,11 @@ const getRapidFirePrizeTextClass = (prize: number) => {
 	return 'text-neutral-400';
 };
 
+const getPrizeLetter = (index: number) => {
+	const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'];
+	const questionNumber = prizeStructure.value.length - index;
+	return letters[questionNumber - 1] || 'Q';
+};
 
 const handleAnswerClick = (key: string) => {
 	if (answered.value || timeRemaining.value <= 0) return
@@ -438,12 +448,12 @@ const handleAnswerClick = (key: string) => {
 }
 
 const confirmAnswer = (answer: string) => {
-	if (answered.value || (timeRemaining.value <= 0 && quizStore.gameMode?.id !== 'rapidfire')) return;
+	if (answered.value || (timeRemaining.value <= 0 && appStore.gameMode?.id !== 'rapidfire')) return;
 
 	answered.value = true;
-	isCorrect.value = quizStore.answerQuestion(answer);
+	isCorrect.value = appStore.answerQuestion(answer);
 	
-	if (quizStore.gameMode?.id === 'rapidfire') {
+	if (appStore.gameMode?.id === 'rapidfire') {
 		if(isCorrect.value) {
 			rapidFireScore.value += 5;
 		} else {
@@ -463,11 +473,11 @@ const confirmAnswer = (answer: string) => {
 			if (isLastQuestion.value) {
 				completeGame()
 			} else {
-				quizStore.nextQuestion()
+				appStore.nextQuestion()
 				resetQuestion()
 			}
 		}, 900)
-	} else if (quizStore.gameMode?.id === 'normal') {
+	} else if (appStore.gameMode?.id === 'normal') {
 		setTimeout(() => {
 			completeGame();
 		}, 900);
@@ -536,9 +546,9 @@ const getLifelineResult = (lifelineId: string) => {
 }
 
 const nextQuestion = () => {
-	if (quizStore.gameMode?.id === 'rapidfire') {
+	if (appStore.gameMode?.id === 'rapidfire') {
 		if (timeRemaining.value > 0) {
-			quizStore.nextQuestion();
+			appStore.nextQuestion();
 			resetQuestion();
 		} else {
 			completeGame();
@@ -549,7 +559,7 @@ const nextQuestion = () => {
 	if (isLastQuestion.value) {
 		completeGame();
 	} else {
-		quizStore.nextQuestion();
+		appStore.nextQuestion();
 		resetQuestion();
 	}
 };
@@ -564,7 +574,7 @@ const resetQuestion = () => {
 	hiddenOptions.value = [];
 
 	// For normal modes, restart timer per question
-	if (quizStore.gameMode?.id !== 'rapidfire') {
+	if (appStore.gameMode?.id !== 'rapidfire') {
 		startTimer();
 	}
 };
@@ -578,9 +588,9 @@ const walkAway = async () => {
 	}
 	
 	// Update the quiz store's current question index before completing the game
-	quizStore.currentQuestionIndex = questionsAnswered;
+	appStore.currentQuestionIndex = questionsAnswered;
 	
-	await quizStore.completeGame(currentPrize.value);
+	await appStore.completeGame(currentPrize.value);
 	router.push('/result');
 };
 
@@ -595,14 +605,14 @@ const completeGame = async () => {
 		questionsAnswered = currentQuestionIndex.value + 1; // Include the current question
 	}
 	
-	if(quizStore.gameMode?.id === 'rapidfire') {
+	if(appStore.gameMode?.id === 'rapidfire') {
 		finalScore = rapidFireScore.value;
 	}
 	
 	// Update the quiz store's current question index before completing the game
-	quizStore.currentQuestionIndex = questionsAnswered;
+	appStore.currentQuestionIndex = questionsAnswered;
 	
-	await quizStore.completeGame(finalScore);
+	await appStore.completeGame(finalScore);
 	router.push('/result');
 };
 

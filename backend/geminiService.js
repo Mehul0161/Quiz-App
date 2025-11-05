@@ -792,6 +792,56 @@ class GeminiService {
         return finalQuestions;
     }
 
+    // Get question count for a category
+    async getQuestionCount(category) {
+        try {
+            if (!mongoService.isConnected) {
+                return 0;
+            }
+            const questionsCollection = mongoService.getCollection('questions');
+            const count = await questionsCollection.countDocuments({ category });
+            return count;
+        } catch (error) {
+            console.error('Error getting question count:', error.message);
+            return 0;
+        }
+    }
+
+    // Select random questions from a pool
+    selectRandomQuestions(questions, category) {
+        if (!questions || questions.length === 0) {
+            return this.generateCategorySpecificQuestions(category);
+        }
+
+        // Shuffle and select 15 questions
+        const shuffled = [...questions].sort(() => Math.random() - 0.5);
+        const selected = shuffled.slice(0, 15);
+
+        // Ensure we have 15 questions
+        while (selected.length < 15) {
+            const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+            selected.push(randomQuestion);
+        }
+
+        // Map to correct format
+        const prizeStructure = [100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000, 250000, 500000, 1000000];
+        
+        return selected.map((q, index) => ({
+            question_number: (index + 1).toString(),
+            prize_amount: prizeStructure[index].toString(),
+            question: q.question,
+            options: q.options,
+            correct_answer: q.correct_answer,
+            difficulty_level: q.difficulty_level,
+            explanation: q.explanation,
+            lifelines: q.lifelines || {
+                fifty_fifty: ["A", "B"],
+                audience_poll: { "A": "25%", "B": "25%", "C": "25%", "D": "25%" },
+                phone_a_friend: "I'm not entirely sure about this one."
+            }
+        }));
+    }
+
     // Generate image-based questions with image search query
     async generateImageQuestions(category) {
         const prompt = `

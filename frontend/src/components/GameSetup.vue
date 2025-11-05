@@ -150,9 +150,15 @@ const startGame = async () => {
 	if (!selectedMode.value || !selectedCategory.value) return
 	try {
 		await appStore.startQuiz(selectedCategory.value, selectedMode.value)
-		router.push('/game')
+		// Only navigate if quiz started successfully
+		if (appStore.questions && appStore.questions.length > 0) {
+			router.push('/game')
+		} else {
+			console.error('Questions not available after startQuiz, not navigating')
+		}
 	} catch (err) {
-		// Error is set in store
+		// Error is set in store - don't navigate on error
+		console.error('Failed to start quiz:', err)
 	}
 }
 

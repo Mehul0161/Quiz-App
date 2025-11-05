@@ -292,15 +292,41 @@ const store = createStore<AppState>()((set, get) => {
     try {
       const mode = gameModes.find(m => m.id === selectedMode)
       if (!mode) throw new Error('Invalid game mode')
+      
+      console.log('Starting quiz:', { category: selectedCategory, mode: selectedMode })
+      
       const response = await axios.post(`${API_BASE_URL}/quizzes/start`, {
         category: selectedCategory,
         mode: selectedMode
       })
-      let fetchedQuestions = response.data.questions
+      
+      console.log('Quiz response received:', response.data)
+      
+      let fetchedQuestions = response.data?.questions
+      
+      if (!fetchedQuestions || !Array.isArray(fetchedQuestions) || fetchedQuestions.length === 0) {
+        console.error('No questions received from API:', response.data)
+        throw new Error('No questions received from server')
+      }
+      
+      console.log(`Received ${fetchedQuestions.length} questions`)
+      
       if (mode.id === 'rapidfire') fetchedQuestions = fetchedQuestions.sort(() => Math.random() - 0.5)
-      set({ questions: fetchedQuestions, currentQuestionIndex: 0, score: 0, gameMode: mode, category: selectedCategory, rapidFireScore: 0 })
+      
+      set({ 
+        questions: fetchedQuestions, 
+        currentQuestionIndex: 0, 
+        score: 0, 
+        gameMode: mode, 
+        category: selectedCategory, 
+        rapidFireScore: 0 
+      })
+      
+      console.log('Quiz started successfully, questions set in store')
     } catch (err: any) {
-      set({ error: 'Failed to start quiz' })
+      console.error('Error starting quiz:', err)
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to start quiz'
+      set({ error: errorMessage })
       throw err
     } finally {
       set({ loading: false })

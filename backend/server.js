@@ -473,7 +473,7 @@ app.get('/api/users/:id', authenticateToken, async (req, res) => {
         const usersCollection = mongoService.getCollection('users');
         
         const userId = req.params.id;
-        const user = await usersCollection.findOne({ _id: userId });
+        const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
         
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -735,33 +735,184 @@ app.post('/api/quizzes/test', async (req, res) => {
 	}
 })
 
+// Helper function to get questions from database for a category and mode
+async function getQuestionsFromDatabase(category, gameMode) {
+	try {
+		if (!mongoService.isConnected) {
+			console.log('MongoDB not connected, skipping database check')
+			return []
+		}
+
+		const questionsCollection = mongoService.getCollection('questions')
+		
+		// Build query based on game mode
+		let query = { category: category }
+		
+		// For no-options mode, also accept questions with null options or no gameMode field
+		if (gameMode === 'nooptions') {
+			query = {
+				category: category,
+				$or: [
+					{ gameMode: 'nooptions' },
+					{ options: null },
+					{ acceptableAnswers: { $exists: true } }
+				]
+			}
+		} else {
+			query.gameMode = gameMode
+		}
+		
+		// Query for questions matching category and game mode
+		const questions = await questionsCollection
+			.find(query)
+			.sort({ createdAt: -1 }) // Get newest first
+			.limit(100) // Get up to 100 questions
+			.toArray()
+
+		console.log(`Found ${questions.length} ${gameMode} questions for ${category} in database`)
+		return questions
+	} catch (error) {
+		console.error('Error fetching questions from database:', error)
+		return []
+	}
+}
+
+// Helper function to select and format questions for quiz
+function selectAndFormatQuestions(dbQuestions, category, gameMode, excludeQuestionIds = []) {
+	if (!dbQuestions || dbQuestions.length === 0) {
+		return generateFallbackQuestions(category)
+	}
+
+	// Filter out excluded questions (from session storage)
+	const availableQuestions = dbQuestions.filter(q => 
+		!excludeQuestionIds.includes(q._id?.toString())
+	)
+
+	console.log(`Available questions after filtering: ${availableQuestions.length} (total: ${dbQuestions.length}, excluded: ${excludeQuestionIds.length})`)
+
+	// If not enough available questions, use all questions
+	const questionsToUse = availableQuestions.length >= 15 ? availableQuestions : dbQuestions
+
+	let selected = []
+
+	// For normal mode: organize by difficulty (4 easy, 4 medium, 4 hard, 3 very hard)
+	if (gameMode === 'normal') {
+		const easyQuestions = questionsToUse.filter(q => q.difficulty_level === 'easy')
+		const mediumQuestions = questionsToUse.filter(q => q.difficulty_level === 'medium')
+		const hardQuestions = questionsToUse.filter(q => q.difficulty_level === 'hard')
+		const veryHardQuestions = questionsToUse.filter(q => q.difficulty_level === 'very hard')
+
+		// Shuffle each difficulty level
+		const shuffleArray = (arr) => [...arr].sort(() => Math.random() - 0.5)
+
+		// Select 4 easy, 4 medium, 4 hard, 3 very hard
+		selected = [
+			...shuffleArray(easyQuestions).slice(0, 4),
+			...shuffleArray(mediumQuestions).slice(0, 4),
+			...shuffleArray(hardQuestions).slice(0, 4),
+			...shuffleArray(veryHardQuestions).slice(0, 3)
+		]
+
+		// If not enough questions of a difficulty, fill with random questions
+		while (selected.length < 15) {
+			const randomQuestion = questionsToUse[Math.floor(Math.random() * questionsToUse.length)]
+			if (!selected.includes(randomQuestion)) {
+				selected.push(randomQuestion)
+			}
+		}
+
+		console.log(`✓ Selected ${selected.length} questions in progressive difficulty order (4 easy, 4 medium, 4 hard, 3 very hard)`)
+	} else {
+		// For other modes: random selection
+		const shuffled = [...questionsToUse].sort(() => Math.random() - 0.5)
+		selected = shuffled.slice(0, 15)
+
+		// Ensure we have 15 questions
+		while (selected.length < 15 && dbQuestions.length > 0) {
+			const randomQuestion = dbQuestions[Math.floor(Math.random() * dbQuestions.length)]
+			if (!selected.includes(randomQuestion)) {
+				selected.push(randomQuestion)
+			}
+		}
+	}
+
+	// Transform to frontend format
+	const formattedQuestions = selected.map((q, index) => {
+		const formatted = {
+			id: q._id?.toString() || `${gameMode}_${Date.now()}_${index}`,
+			question: q.question,
+			options: q.options,
+			correctAnswer: q.correct_answer,
+			difficulty: q.difficulty_level,
+			explanation: q.explanation,
+			category: category,
+			questionNumber: index + 1,
+			prizeValue: PRIZE_STRUCTURE[index]
+		}
+
+		// Add lifelines for normal mode
+		if (gameMode === 'normal' && q.lifelines) {
+			formatted.lifelines = {
+				'50-50': q.lifelines.fifty_fifty,
+				audience: q.lifelines.audience_poll,
+				friend: q.lifelines.phone_a_friend
+			}
+		}
+
+		// Add acceptable answers for no-options mode
+		if (gameMode === 'nooptions' && q.acceptableAnswers) {
+			formatted.acceptableAnswers = q.acceptableAnswers
+		}
+
+		return formatted
+	})
+
+	console.log(`✓ Formatted ${formattedQuestions.length} questions for ${gameMode} mode`)
+	return formattedQuestions
+}
+
 // Quiz generation routes
 app.post('/api/quizzes/start', async (req, res) => {
 	try {
-		const { category, mode } = req.body
+		const { category, mode, excludeQuestionIds } = req.body
 		
 		if (!category || !mode) {
 			return res.status(400).json({ error: 'Category and mode are required' })
 		}
 
 		console.log(`Starting quiz for category: ${category}, mode: ${mode}`)
+		
+		if (excludeQuestionIds && excludeQuestionIds.length > 0) {
+			console.log(`Excluding ${excludeQuestionIds.length} questions from this session`)
+		}
 
 		// Generate questions based on mode
 		let questions = []
 		
     switch (mode) {
 			case 'normal':
-				questions = await generateNormalQuestions(category)
+				questions = await generateNormalQuestions(category, excludeQuestionIds)
 				break
 			case 'rapidfire':
-				questions = await generateRapidFireQuestions(category)
+				questions = await generateRapidFireQuestions(category, excludeQuestionIds)
 				break
 			case 'nooptions':
-				questions = await generateNoOptionsQuestions(category)
+				questions = await generateNoOptionsQuestions(category, excludeQuestionIds)
 				break
 			default:
 				return res.status(400).json({ error: 'Invalid game mode' })
 		}
+
+		// Validate questions before sending
+		if (!questions || !Array.isArray(questions) || questions.length === 0) {
+			console.error('No questions generated or questions is empty:', questions)
+			return res.status(500).json({ 
+				error: 'Failed to generate questions',
+				details: 'No questions were generated for this quiz'
+			})
+		}
+
+		console.log(`Sending ${questions.length} questions to frontend`)
 
 		res.json({ 
 			questions,
@@ -771,15 +922,33 @@ app.post('/api/quizzes/start', async (req, res) => {
 		})
 	} catch (error) {
 		console.error('Error starting quiz:', error)
-		res.status(500).json({ error: 'Failed to start quiz' })
+		console.error('Error stack:', error.stack)
+		res.status(500).json({ 
+			error: 'Failed to start quiz',
+			details: error.message 
+		})
 	}
 })
 
-// Generate normal mode questions using AI (always generate new questions)
-async function generateNormalQuestions(category) {
+// Generate normal mode questions - Check DB first, then generate if needed
+async function generateNormalQuestions(category, excludeQuestionIds = []) {
 	try {
-		console.log(`Generating AI questions for Normal Mode - Category: ${category}`)
-        
+		console.log(`Starting Normal Mode quiz for category: ${category}`)
+		
+		// Step 1: Try to get questions from database
+		console.log(`Step 1: Checking database for existing questions...`)
+		const dbQuestions = await getQuestionsFromDatabase(category, 'normal')
+		
+		if (dbQuestions && dbQuestions.length >= 15) {
+			console.log(`✓ Found ${dbQuestions.length} questions in database, using them`)
+			return selectAndFormatQuestions(dbQuestions, category, 'normal', excludeQuestionIds)
+		}
+		
+		console.log(`✗ Database has only ${dbQuestions?.length || 0} questions, need to generate new ones`)
+		
+		// Step 2: Generate new questions if not enough in DB
+		console.log(`Step 2: Generating new questions from AI...`)
+		
         // Check if Gemini API key is available
         if (!process.env.GEMINI_API_KEY) {
 			console.error('GEMINI_API_KEY not found, using fallback questions')
@@ -795,9 +964,9 @@ async function generateNormalQuestions(category) {
 			return generateFallbackQuestions(category)
 		}
 
-		// Always generate new AI questions for normal mode
+		// Generate new AI questions for normal mode
 		const aiResponse = await geminiService.generateNewQuestions(category)
-		console.log('AI Response received for Normal Mode')
+		console.log('✓ AI Response received for Normal Mode')
 		
         if (aiResponse && aiResponse.content && aiResponse.content.questions) {
 			const questions = aiResponse.content.questions
@@ -829,8 +998,17 @@ async function generateNormalQuestions(category) {
 			}
 			
 			console.log('Successfully transformed AI questions for Normal Mode')
+			console.log(`Returning ${transformedQuestions.length} questions`)
+			
+			// Validate questions before returning
+			if (!transformedQuestions || transformedQuestions.length === 0) {
+				console.error('Transformed questions array is empty, using fallback')
+				return generateFallbackQuestions(category)
+			}
+			
 			return transformedQuestions
 		} else {
+			console.error('Invalid AI response format - missing content or questions')
 			throw new Error('Invalid AI response format')
 		}
 	} catch (error) {
@@ -916,10 +1094,24 @@ async function storeQuestionsAndManageLimit(category, newQuestions) {
 	}
 }
 
-// Generate rapid fire questions using AI (always generate new questions)
-async function generateRapidFireQuestions(category) {
+// Generate rapid fire questions - Check DB first, then generate if needed
+async function generateRapidFireQuestions(category, excludeQuestionIds = []) {
 	try {
-		console.log(`Generating AI questions for Rapid Fire Mode - Category: ${category}`)
+		console.log(`Starting Rapid Fire Mode quiz for category: ${category}`)
+		
+		// Step 1: Try to get questions from database
+		console.log(`Step 1: Checking database for existing questions...`)
+		const dbQuestions = await getQuestionsFromDatabase(category, 'rapidfire')
+		
+		if (dbQuestions && dbQuestions.length >= 15) {
+			console.log(`✓ Found ${dbQuestions.length} questions in database, using them`)
+			return selectAndFormatQuestions(dbQuestions, category, 'rapidfire', excludeQuestionIds)
+		}
+		
+		console.log(`✗ Database has only ${dbQuestions?.length || 0} questions, need to generate new ones`)
+		
+		// Step 2: Generate new questions if not enough in DB
+		console.log(`Step 2: Generating new questions from AI...`)
 		
 		// Check if Gemini API key is available
 		if (!process.env.GEMINI_API_KEY) {
@@ -927,9 +1119,9 @@ async function generateRapidFireQuestions(category) {
 			return generateFallbackQuestions(category)
 		}
 
-		// Always generate new AI questions for rapid fire mode
+		// Generate new AI questions for rapid fire mode
 		const aiResponse = await geminiService.generateNewQuestions(category)
-		console.log('AI Response received for Rapid Fire Mode')
+		console.log('✓ AI Response received for Rapid Fire Mode')
 
 		if (aiResponse && aiResponse.content && aiResponse.content.questions) {
 			const questions = aiResponse.content.questions
@@ -961,10 +1153,24 @@ async function generateRapidFireQuestions(category) {
 	}
 }
 
-// Generate no-options questions using AI
-async function generateNoOptionsQuestions(category) {
+// Generate no-options questions - Check DB first, then generate if needed
+async function generateNoOptionsQuestions(category, excludeQuestionIds = []) {
 	try {
-		console.log(`Generating AI questions for No Options Mode - Category: ${category}`)
+		console.log(`Starting No Options Mode quiz for category: ${category}`)
+		
+		// Step 1: Try to get questions from database
+		console.log(`Step 1: Checking database for existing questions...`)
+		const dbQuestions = await getQuestionsFromDatabase(category, 'nooptions')
+		
+		if (dbQuestions && dbQuestions.length >= 15) {
+			console.log(`✓ Found ${dbQuestions.length} questions in database, using them`)
+			return selectAndFormatQuestions(dbQuestions, category, 'nooptions', excludeQuestionIds)
+		}
+		
+		console.log(`✗ Database has only ${dbQuestions?.length || 0} questions, need to generate new ones`)
+		
+		// Step 2: Generate new questions if not enough in DB
+		console.log(`Step 2: Generating new questions from AI...`)
 		
 		// Check if Gemini API key is available
 		if (!process.env.GEMINI_API_KEY) {
@@ -1103,9 +1309,10 @@ app.post('/api/games/complete', authenticateToken, async (req, res) => {
         
         let scoreToAdd = finalScore || 0;
         
-        // Handle rapid fire scoring differently
+        // Handle rapid fire scoring differently - multiply by 1000
         if (gameMode === 'rapidfire' && typeof rapidFireScore === 'number') {
-            scoreToAdd = rapidFireScore; // Use rapid fire score instead of prize-based score
+            scoreToAdd = rapidFireScore * 1000; // Multiply rapid fire score by 1000
+            console.log(`Rapid Fire Score: ${rapidFireScore} points × 1000 = ${scoreToAdd} earnings`)
         }
         
         const modeKey = gameMode || 'normal';
