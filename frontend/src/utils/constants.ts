@@ -47,6 +47,7 @@ export const GAME_MODES = {
     lifelines: 3,
     difficulty: 'Medium',
     color: 'primary',
+    entryFee: 20000,
     details: [
       '30 seconds per question',
       '3 lifelines: 50:50, Audience, Friend',
@@ -62,6 +63,7 @@ export const GAME_MODES = {
     lifelines: 0,
     difficulty: 'Hard',
     color: 'accent',
+    entryFee: 15000,
     details: [
       '15 seconds per question',
       'No lifelines',
@@ -77,6 +79,7 @@ export const GAME_MODES = {
     lifelines: 0,
     difficulty: 'Very Hard',
     color: 'danger',
+    entryFee: 30000,
     details: [
       '45 seconds per question',
       'Type your exact answer',

@@ -3,7 +3,7 @@ import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from './stores/appStore'
 import { formatCurrency } from './utils/constants'
-import { Coins, Home, BarChart3, Trophy, User, Lock, Menu } from 'lucide-vue-next'
+import { Coins, Home, BarChart3, Trophy, User, Lock, Menu, Gamepad2, ShoppingBag } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
@@ -108,6 +108,34 @@ onMounted(() => {
             >
               <span class="flex items-center gap-2">
                 <Trophy :size="16" /> Leaderboard
+              </span>
+            </router-link>
+
+            <router-link 
+              to="/tournaments" 
+              :class="[
+                'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                isActiveRoute('/tournaments')
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
+              ]"
+            >
+              <span class="flex items-center gap-2">
+                <Gamepad2 :size="16" /> Tournaments
+              </span>
+            </router-link>
+
+            <router-link 
+              to="/shop" 
+              :class="[
+                'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                isActiveRoute('/shop')
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
+              ]"
+            >
+              <span class="flex items-center gap-2">
+                <ShoppingBag :size="16" /> Shop
               </span>
             </router-link>
           </div>

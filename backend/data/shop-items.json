@@ -1,0 +1,146 @@
+[
+  {
+    "name": "Golden Badge",
+    "description": "Rare golden badge for your profile",
+    "category": "badges",
+    "price": 50000,
+    "rarity": "rare",
+    "image": "https://via.placeholder.com/100?text=Golden+Badge",
+    "effect": "golden_glow"
+  },
+  {
+    "name": "Silver Badge",
+    "description": "Uncommon silver badge",
+    "category": "badges",
+    "price": 25000,
+    "rarity": "uncommon",
+    "image": "https://via.placeholder.com/100?text=Silver+Badge",
+    "effect": "silver_shine"
+  },
+  {
+    "name": "Bronze Badge",
+    "description": "Common bronze badge",
+    "category": "badges",
+    "price": 10000,
+    "rarity": "common",
+    "image": "https://via.placeholder.com/100?text=Bronze+Badge",
+    "effect": "bronze_shine"
+  },
+  {
+    "name": "Diamond Badge",
+    "description": "Epic diamond badge - ultra rare",
+    "category": "badges",
+    "price": 100000,
+    "rarity": "epic",
+    "image": "https://via.placeholder.com/100?text=Diamond+Badge",
+    "effect": "diamond_sparkle"
+  },
+  {
+    "name": "Legendary Crown",
+    "description": "Legendary crown badge - the rarest",
+    "category": "badges",
+    "price": 500000,
+    "rarity": "legendary",
+    "image": "https://via.placeholder.com/100?text=Legendary+Crown",
+    "effect": "crown_glow"
+  },
+  {
+    "name": "Dark Theme",
+    "description": "Dark theme for the UI",
+    "category": "themes",
+    "price": 15000,
+    "rarity": "uncommon",
+    "image": "https://via.placeholder.com/100?text=Dark+Theme",
+    "effect": "dark_mode"
+  },
+  {
+    "name": "Light Theme",
+    "description": "Light theme for the UI",
+    "category": "themes",
+    "price": 15000,
+    "rarity": "uncommon",
+    "image": "https://via.placeholder.com/100?text=Light+Theme",
+    "effect": "light_mode"
+  },
+  {
+    "name": "Neon Theme",
+    "description": "Neon theme with vibrant colors",
+    "category": "themes",
+    "price": 50000,
+    "rarity": "rare",
+    "image": "https://via.placeholder.com/100?text=Neon+Theme",
+    "effect": "neon_mode"
+  },
+  {
+    "name": "Avatar - Lion",
+    "description": "Lion avatar for your profile",
+    "category": "avatars",
+    "price": 20000,
+    "rarity": "uncommon",
+    "image": "https://via.placeholder.com/100?text=Lion+Avatar",
+    "effect": "lion_avatar"
+  },
+  {
+    "name": "Avatar - Dragon",
+    "description": "Dragon avatar - rare and powerful",
+    "category": "avatars",
+    "price": 75000,
+    "rarity": "epic",
+    "image": "https://via.placeholder.com/100?text=Dragon+Avatar",
+    "effect": "dragon_avatar"
+  },
+  {
+    "name": "Avatar - Phoenix",
+    "description": "Phoenix avatar - legendary",
+    "category": "avatars",
+    "price": 250000,
+    "rarity": "legendary",
+    "image": "https://via.placeholder.com/100?text=Phoenix+Avatar",
+    "effect": "phoenix_avatar"
+  },
+  {
+    "name": "Avatar - Eagle",
+    "description": "Eagle avatar",
+    "category": "avatars",
+    "price": 30000,
+    "rarity": "rare",
+    "image": "https://via.placeholder.com/100?text=Eagle+Avatar",
+    "effect": "eagle_avatar"
+  },
+  {
+    "name": "Particle Effect - Stars",
+    "description": "Stars particle effect during games",
+    "category": "effects",
+    "price": 25000,
+    "rarity": "uncommon",
+    "image": "https://via.placeholder.com/100?text=Stars+Effect",
+    "effect": "stars_particles"
+  },
+  {
+    "name": "Particle Effect - Fire",
+    "description": "Fire particle effect during games",
+    "category": "effects",
+    "price": 40000,
+    "rarity": "rare",
+    "image": "https://via.placeholder.com/100?text=Fire+Effect",
+    "effect": "fire_particles"
+  },
+  {
+    "name": "Particle Effect - Ice",
+    "description": "Ice particle effect during games",
+    "category": "effects",
+    "price": 40000,
+    "rarity": "rare",
+    "image": "https://via.placeholder.com/100?text=Ice+Effect",
+    "effect": "ice_particles"
+  },
+  {
+    "name": "Particle Effect - Rainbow",
+    "description": "Rainbow particle effect - legendary",
+    "category": "effects",
+    "price": 150000,
+    "rarity": "epic",
+    "image": "https://via.placeholder.com/100?text=Rainbow+Effect",
+    "effect": "rainbow_particles"
+  }
+]

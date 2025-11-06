@@ -20,6 +20,11 @@ const geminiService = new GeminiService();
 app.use(cors()); // Enables CORS for all origins
 app.use(express.json());
 
+// Import routes
+const walletRoutes = require('./routes/wallet');
+const tournamentRoutes = require('./routes/tournaments');
+const shopRoutes = require('./routes/shop');
+
 // JWT Secret (in production, use environment variable)
 const JWT_SECRET = process.env.JWT_SECRET || 'quiz-app-jwt-secret-key-2024-change-in-production';
 
@@ -526,6 +531,65 @@ app.get('/api/users/profile/me', authenticateToken, async (req, res) => {
     }
 });
 
+// Deduct earnings (for game entry fees, etc)
+app.post('/api/users/deduct-earnings', authenticateToken, async (req, res) => {
+    try {
+        const { amount, reason } = req.body;
+        
+        if (!amount || amount <= 0) {
+            return res.status(400).json({ error: 'Invalid amount' });
+        }
+        
+        await mongoService.connect();
+        const usersCollection = mongoService.getCollection('users');
+        const userId = new ObjectId(req.user.userId);
+        
+        // Get user to check balance
+        const user = await usersCollection.findOne({ _id: userId });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Check if user has enough earnings
+        if (user.totalEarnings < amount) {
+            return res.status(400).json({ 
+                error: 'Insufficient earnings',
+                available: user.totalEarnings,
+                needed: amount
+            });
+        }
+        
+        // Deduct earnings
+        const result = await usersCollection.updateOne(
+            { _id: userId },
+            {
+                $inc: {
+                    totalEarnings: -amount,
+                    spentEarnings: amount
+                }
+            }
+        );
+        
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Get updated user
+        const updatedUser = await usersCollection.findOne({ _id: userId });
+        
+        res.json({
+            success: true,
+            message: 'Earnings deducted successfully',
+            newBalance: updatedUser.totalEarnings,
+            amountDeducted: amount,
+            reason: reason || 'transaction'
+        });
+    } catch (error) {
+        console.error('Error deducting earnings:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Quiz routes
 app.get('/api/categories', (req, res) => {
     res.json({ categories: QUIZ_CATEGORIES });
@@ -561,17 +625,19 @@ app.get('/api/leaderboard', async (req, res) => {
             .find({})
             .sort({ totalEarnings: -1 })
             .limit(limit)
-            .map((user, index) => ({
-                rank: index + 1,
-                username: user.username,
-                totalEarnings: user.totalEarnings,
-                gamesPlayed: user.gamesPlayed,
-                highestScore: user.highestScore
-            }))
             .toArray();
         
+        // Map with rank
+        const leaderboardData = sortedUsers.map((user, index) => ({
+            rank: index + 1,
+            username: user.username,
+            totalEarnings: user.totalEarnings || 0,
+            gamesPlayed: user.gamesPlayed || 0,
+            highestScore: user.highestScore || 0
+        }));
+        
         res.json({ 
-            leaderboard: sortedUsers,
+            leaderboard: leaderboardData,
             totalPlayers: totalPlayers
         });
     } catch (error) {
@@ -822,8 +888,20 @@ function selectAndFormatQuestions(dbQuestions, category, gameMode, excludeQuesti
 		}
 
 		console.log(`✓ Selected ${selected.length} questions in progressive difficulty order (4 easy, 4 medium, 4 hard, 3 very hard)`)
+	} else if (gameMode === 'rapidfire') {
+		// For rapid fire mode: select 20 questions
+		const shuffled = [...questionsToUse].sort(() => Math.random() - 0.5)
+		selected = shuffled.slice(0, 20)
+
+		// Ensure we have 20 questions
+		while (selected.length < 20 && dbQuestions.length > 0) {
+			const randomQuestion = dbQuestions[Math.floor(Math.random() * dbQuestions.length)]
+			if (!selected.includes(randomQuestion)) {
+				selected.push(randomQuestion)
+			}
+		}
 	} else {
-		// For other modes: random selection
+		// For other modes: random selection (15 questions)
 		const shuffled = [...questionsToUse].sort(() => Math.random() - 0.5)
 		selected = shuffled.slice(0, 15)
 
@@ -1103,7 +1181,7 @@ async function generateRapidFireQuestions(category, excludeQuestionIds = []) {
 		console.log(`Step 1: Checking database for existing questions...`)
 		const dbQuestions = await getQuestionsFromDatabase(category, 'rapidfire')
 		
-		if (dbQuestions && dbQuestions.length >= 15) {
+		if (dbQuestions && dbQuestions.length >= 20) {
 			console.log(`✓ Found ${dbQuestions.length} questions in database, using them`)
 			return selectAndFormatQuestions(dbQuestions, category, 'rapidfire', excludeQuestionIds)
 		}
@@ -1188,9 +1266,9 @@ async function generateNoOptionsQuestions(category, excludeQuestionIds = []) {
 			  "content": {
 				"questions": [
 				  {
-					"question": "Question text that can be answered with a short text response",
-					"correct_answer": "The exact correct answer (one or two words max, lowercase)",
-					"acceptable_answers": ["list", "of", "short", "synonyms"],
+					"question": "Question text that can be answered with a single word only",
+					"correct_answer": "singleword",
+					"acceptable_answers": ["synonym1", "variant2"],
 					"difficulty_level": "easy|medium|hard|very hard",
 					"explanation": "Brief explanation of the answer (short)"
 				  }
@@ -1198,12 +1276,16 @@ async function generateNoOptionsQuestions(category, excludeQuestionIds = []) {
 			  }
 			}
 
-			Strict requirements:
-			1. Answers must be one or two words only. No sentences. Prefer single words when possible.
-			2. Provide 1-5 acceptable_answers that are short synonyms/variants (all lowercase, no punctuation).
-			3. Progressive difficulty: 1-4 easy, 5-8 medium, 9-12 hard, 13-15 very hard
-			4. Focus on factual prompts that naturally yield short answers (names, single terms, places).
-			5. Ensure the entire output is a single, clean JSON object with no markdown code fences.
+			CRITICAL REQUIREMENTS - ALL ANSWERS MUST BE SINGLE WORDS:
+			1. EVERY correct_answer MUST be exactly ONE WORD only. No multi-word answers. No exceptions.
+			2. acceptable_answers must also be single words only (synonyms, variants, abbreviations).
+			3. If a concept requires multiple words, rephrase the question to have a single-word answer.
+			4. Examples of valid answers: "paris", "oxygen", "shakespeare", "gravity", "photosynthesis", "napoleon"
+			5. Examples of INVALID answers: "new york", "world war", "united states" - DO NOT USE THESE
+			6. Progressive difficulty: 1-4 easy, 5-8 medium, 9-12 hard, 13-15 very hard
+			7. Focus on factual prompts with naturally single-word answers (names, terms, places, concepts).
+			8. All answers must be lowercase with no punctuation.
+			9. Ensure the entire output is a single, clean JSON object with no markdown code fences.
 		`
 		
 		const result = await geminiService.model.generateContent(prompt)
@@ -1331,6 +1413,7 @@ app.post('/api/games/complete', authenticateToken, async (req, res) => {
         // Build dynamic update for per-mode stats
         const incFields = {
             totalEarnings: scoreToAdd,
+            earnedEarnings: scoreToAdd,  // NEW: Track earned earnings
             gamesPlayed: 1,
         };
         incFields[`stats.${modeKey}.gamesPlayed`] = 1;
@@ -1674,6 +1757,11 @@ async function startServer() {
 if (!process.env.VERCEL) {
 startServer().catch(console.error);
 }
+
+// Register routes
+app.use('/api/wallet', walletRoutes);
+app.use('/api/tournaments', tournamentRoutes);
+app.use('/api/shop', shopRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

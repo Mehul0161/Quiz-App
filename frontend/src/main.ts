@@ -14,6 +14,8 @@ import Profile from './components/Profile.vue'
 import Result from './components/Result.vue';
 import Statistics from './components/Statistics.vue'
 import OAuthCallback from './components/auth/OAuthCallback.vue'
+import Tournaments from './pages/Tournaments.vue'
+import Shop from './pages/Shop.vue'
 
 // Create router
 const router = createRouter({
@@ -50,6 +52,14 @@ const router = createRouter({
       path: '/statistics',
       component: Statistics,
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/tournaments',
+      component: Tournaments
+    },
+    {
+      path: '/shop',
+      component: Shop
     },
     { path: '/oauth/callback', component: OAuthCallback }
   ]

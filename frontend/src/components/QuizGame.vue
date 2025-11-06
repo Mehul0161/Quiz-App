@@ -1,11 +1,11 @@
 <template>
 	<div class="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 p-4">
 		<!-- Game Header -->
-		<div class="max-w-7xl mx-auto mb-6">
-			<div class="card p-4 shadow-lg border-2 border-neutral-700">
-				<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+		<div class="max-w-7xl mx-auto mb-4">
+			<div class="card p-3 shadow-lg border-2 border-neutral-700">
+				<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
 					<div class="flex-1">
-						<h1 class="text-xl md:text-2xl font-bold text-white mb-1">
+						<h1 class="text-base md:text-lg font-bold text-white mb-0.5">
 							<span v-if="appStore.gameMode?.id === 'rapidfire'">
 								Rapid Fire Mode!
 							</span>
@@ -14,20 +14,20 @@
 							</span>
 							<span class="text-indigo-400 block sm:inline">- {{ appStore.category }}</span>
 						</h1>
-						<p class="text-sm text-neutral-400">Mode: {{ appStore.gameMode?.name }}</p>
+						<p class="text-xs text-neutral-400">Mode: {{ appStore.gameMode?.name }}</p>
 					</div>
 					<div class="text-left sm:text-right">
 						<!-- Rapid Fire Score Display -->
 						<div v-if="appStore.gameMode?.id === 'rapidfire'" class="text-center">
-							<div class="text-xl md:text-2xl font-bold text-green-400 mb-1">{{ rapidFireScore }} pts</div>
-							<div class="text-sm text-neutral-400">
+							<div class="text-lg md:text-xl font-bold text-green-400 mb-0.5">{{ rapidFireScore }} pts</div>
+							<div class="text-xs text-neutral-400">
 								Time: <span :class="getTimeColor()">{{ formatTime(timeRemaining) }}</span>
 							</div>
 						</div>
 						<!-- Normal Prize Display -->
 						<div v-else>
-							<div class="text-xl md:text-2xl font-bold text-yellow-400 mb-1">${{ currentPrize.toLocaleString() }}</div>
-							<div v-if="appStore.gameMode?.timeLimit" class="text-sm text-neutral-400">
+							<div class="text-lg md:text-xl font-bold text-yellow-400 mb-0.5">${{ currentPrize.toLocaleString() }}</div>
+							<div v-if="appStore.gameMode?.timeLimit" class="text-xs text-neutral-400">
 								Time: <span :class="getTimeColor()">{{ formatTime(timeRemaining) }}</span>
 							</div>
 						</div>
@@ -49,18 +49,16 @@
 
 		<!-- Main Game Area -->
 		<div class="max-w-7xl mx-auto">
-			<div class="flex flex-col xl:flex-row gap-6">
+			<div class="flex flex-col xl:flex-row gap-4">
 				<!-- Left Column: Question + Lifelines (2/3 width) -->
-				<div class="flex-[2] min-w-0 space-y-6">
+				<div class="flex-[2] min-w-0 space-y-4">
 					<!-- Question Card -->
-					<div class="card p-6 shadow-lg border-2 border-neutral-700">
-						<div class="mb-6">
-							<h2 class="text-xl font-bold text-white mb-4 leading-relaxed">{{ currentQuestion?.question }}</h2>
-
-                            
+					<div class="card p-4 shadow-lg border-2 border-neutral-700">
+						<div class="mb-4">
+							<h2 class="text-base font-bold text-white mb-3 leading-relaxed">{{ currentQuestion?.question }}</h2>
 
 							<!-- Answer Options -->
-							<div v-if="currentQuestion?.options && appStore.gameMode?.id !== 'nooptions'" class="space-y-3">
+							<div v-if="currentQuestion?.options && appStore.gameMode?.id !== 'nooptions'" class="space-y-2">
 								<button
 									v-for="(option, key) in currentQuestion.options"
 									:key="key"
@@ -68,10 +66,10 @@
 									@click="handleAnswerClick(key)"
 									:disabled="answered || timeRemaining <= 0"
 									:class="getOptionClass(key)"
-									class="w-full p-3 md:p-4 text-left rounded-xl border-2 transition-all duration-300 disabled:cursor-not-allowed hover:scale-[1.02] hover:shadow-lg transform"
+									class="w-full p-2.5 md:p-3 text-left rounded-lg border-2 transition-all duration-300 disabled:cursor-not-allowed hover:scale-[1.02] hover:shadow-lg transform"
 								>
-									<span class="font-bold text-base md:text-lg mr-2 md:mr-3 inline-flex items-center justify-center w-7 h-7 md:w-8 md:h-8 rounded-full bg-neutral-700 text-white text-sm md:text-base">{{ key }}</span>
-									<span class="text-base md:text-lg">{{ option }}</span>
+									<span class="font-bold text-sm md:text-base mr-2 inline-flex items-center justify-center w-6 h-6 md:w-7 md:h-7 rounded-full bg-neutral-700 text-white text-xs md:text-sm">{{ key }}</span>
+									<span class="text-sm md:text-base">{{ option }}</span>
 								</button>
 							</div>
 
@@ -123,30 +121,30 @@
 					</div>
 
 					<!-- Lifelines Card -->
-					<div v-if="appStore.gameMode?.lifelines && appStore.gameMode.lifelines > 0 && appStore.gameMode?.id === 'normal'" class="card p-4 shadow-lg border-2 border-neutral-700">
-						<h3 class="text-lg font-bold text-white mb-4 text-center">Lifelines</h3>
-						<div class="grid grid-cols-3 gap-2 md:gap-3">
+					<div v-if="appStore.gameMode?.lifelines && appStore.gameMode.lifelines > 0 && appStore.gameMode?.id === 'normal'" class="card p-3 shadow-lg border-2 border-neutral-700">
+						<h3 class="text-base font-bold text-white mb-3 text-center">Lifelines</h3>
+						<div class="grid grid-cols-3 gap-2">
 							<button
 								v-for="lifeline in availableLifelines"
 								:key="lifeline.id"
 								@click="useLifeline(lifeline.id)"
 								:disabled="lifeline.used || answered || timeRemaining <= 0"
-								class="p-2 md:p-3 rounded-xl border-2 transition-all duration-300 text-center hover:scale-105 transform"
+								class="p-2 rounded-lg border-2 transition-all duration-300 text-center hover:scale-105 transform"
 								:class="lifeline.used ? 'border-neutral-600 bg-neutral-800 text-neutral-500 cursor-not-allowed' : 'border-indigo-500 bg-indigo-600/20 text-white hover:bg-indigo-600/30 hover:shadow-lg'"
 							>
-								<div class="mb-1 flex justify-center">
-									<component :is="lifeline.icon" :size="24" :class="lifeline.used ? 'text-neutral-500' : 'text-white'" />
+								<div class="mb-0.5 flex justify-center">
+									<component :is="lifeline.icon" :size="18" :class="lifeline.used ? 'text-neutral-500' : 'text-white'" />
 								</div>
-								<div class="font-semibold text-xs md:text-sm">{{ lifeline.name }}</div>
+								<div class="font-semibold text-xs">{{ lifeline.name }}</div>
 							</button>
 						</div>
 					</div>
 				</div>
 
 				<!-- Right Column: Prize Ladder (1/3 width) -->
-				<div class="flex-[1] min-w-[280px] max-w-[450px] xl:max-w-none">
-					<div class="card p-4 shadow-lg border-2 border-neutral-700 h-fit">
-                        <h3 class="text-lg font-bold text-white mb-3 text-center">Prize Ladder</h3>
+				<div class="flex-[1] min-w-[260px] max-w-[400px] xl:max-w-none">
+					<div class="card p-3 shadow-lg border-2 border-neutral-700 h-fit">
+						<h3 class="text-base font-bold text-white mb-2 text-center">Prize Ladder</h3>
 						<div class="space-y-1.5 max-h-[70vh] overflow-y-auto custom-scrollbar pr-1">
 							<!-- Rapid Fire Prize Ladder -->
 							<div v-if="appStore.gameMode?.id === 'rapidfire'">
@@ -168,7 +166,7 @@
 								</div>
 							</div>
                             <!-- Standard Prize Ladder -->
-                            <div>
+                            <div v-else>
 								<div
 									v-for="(prize, index) in prizeStructure"
 									:key="index"
@@ -477,7 +475,8 @@ const confirmAnswer = (answer: string) => {
 				resetQuestion()
 			}
 		}, 900)
-	} else if (appStore.gameMode?.id === 'normal') {
+	} else if (appStore.gameMode?.id === 'normal' || appStore.gameMode?.id === 'nooptions') {
+		// End game on wrong answer for both normal and no-options modes
 		setTimeout(() => {
 			completeGame();
 		}, 900);

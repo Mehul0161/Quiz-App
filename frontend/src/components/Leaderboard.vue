@@ -1,10 +1,10 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-b from-neutral-950 via-neutral-900 to-neutral-950 p-4 sm:p-6">
-    <div class="max-w-4xl mx-auto">
+  <div class="min-h-screen bg-neutral-950 p-4 sm:p-6">
+    <div class="max-w-5xl mx-auto">
       <!-- Header -->
       <div class="text-center mb-8">
-        <h1 class="text-3xl sm:text-4xl font-bold text-white mb-2 flex items-center justify-center gap-3"><Trophy :size="40" /> Global Leaderboard</h1>
-        <p class="text-neutral-400">Top players competing for the $1M prize</p>
+        <h1 class="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center justify-center gap-2"><Trophy :size="28" class="text-yellow-500" /> Global Leaderboard</h1>
+        <p class="text-neutral-400 text-sm">Top players competing for the $1M prize</p>
       </div>
 
       <!-- Loading -->
@@ -31,102 +31,135 @@
       </div>
 
       <!-- Leaderboard Table -->
-      <div v-else class="space-y-3">
-        <!-- Top 3 Featured Cards -->
-        <div v-if="leaderboard.length >= 1" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <template v-for="rank in [1, 2, 3]" :key="rank">
-          <div v-if="leaderboard[rank - 1]"
-            class="p-6 bg-gradient-to-br rounded-xl border-2 transition"
-            :class="[
-              rank === 1 ? 'from-yellow-900/30 to-yellow-900/10 border-yellow-600/50' :
-              rank === 2 ? 'from-gray-700/30 to-gray-700/10 border-gray-600/50' :
-              'from-amber-900/30 to-amber-900/10 border-amber-600/50'
-            ]"
-          >
-            <div class="flex items-center gap-3 mb-3">
-              <div class="w-12 h-12 rounded-lg flex items-center justify-center"
-                :class="[
-                  rank === 1 ? 'bg-yellow-600' :
-                  rank === 2 ? 'bg-gray-400' :
-                  'bg-amber-700'
-                ]"
-              >
-                <Medal :size="24" 
-                  :class="[
-                    rank === 1 ? 'text-yellow-100' :
-                    rank === 2 ? 'text-gray-900' :
-                    'text-amber-100'
-                  ]"
-                />
-              </div>
-              <div>
-                <div class="font-bold text-white">{{ leaderboard[rank - 1].username }}</div>
-                <div class="text-xs text-neutral-400">Rank #{{ leaderboard[rank - 1].rank }}</div>
+      <div v-else class="space-y-6">
+        <!-- Top 3 Champions -->
+        <div v-if="leaderboard.length >= 1" class="mb-8">
+          <h2 class="text-lg font-bold text-white mb-4">🏆 Top 3 Champions</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- 2nd Place -->
+            <div v-if="leaderboard[1]" class="bg-neutral-800 border border-neutral-700 rounded-lg p-4 text-center hover:border-neutral-600 transition">
+              <div class="text-4xl mb-2">🥈</div>
+              <div class="text-sm font-bold text-white mb-1">{{ leaderboard[1].username }}</div>
+              <div class="text-xs text-neutral-400 mb-3">#2 Rank</div>
+              <div class="space-y-1">
+                <div class="text-lg font-bold text-yellow-400">{{ formatCurrency(leaderboard[1].totalEarnings) }}</div>
+                <div class="text-xs text-neutral-400">{{ leaderboard[1].gamesPlayed }} games</div>
               </div>
             </div>
-            <div class="grid grid-cols-2 gap-2 text-center">
-              <div class="p-2 bg-neutral-900/50 rounded">
-                <div class="text-xs text-neutral-400">Earnings</div>
-                <div class="font-bold text-yellow-400 text-sm">{{ formatCurrency(leaderboard[rank - 1].totalEarnings) }}</div>
+
+            <!-- 1st Place -->
+            <div v-if="leaderboard[0]" class="bg-neutral-800 border-2 border-yellow-500 rounded-lg p-4 text-center hover:border-yellow-400 transition">
+              <div class="text-4xl mb-2">👑</div>
+              <div class="text-sm font-bold text-white mb-1">{{ leaderboard[0].username }}</div>
+              <div class="text-xs text-yellow-400 mb-3 font-semibold">#1 Champion</div>
+              <div class="space-y-1">
+                <div class="text-lg font-bold text-yellow-400">{{ formatCurrency(leaderboard[0].totalEarnings) }}</div>
+                <div class="text-xs text-neutral-400">{{ leaderboard[0].gamesPlayed }} games</div>
               </div>
-              <div class="p-2 bg-neutral-900/50 rounded">
-                <div class="text-xs text-neutral-400">Games</div>
-                <div class="font-bold text-blue-400 text-sm">{{ leaderboard[rank - 1].gamesPlayed }}</div>
+            </div>
+
+            <!-- 3rd Place -->
+            <div v-if="leaderboard[2]" class="bg-neutral-800 border border-neutral-700 rounded-lg p-4 text-center hover:border-neutral-600 transition">
+              <div class="text-4xl mb-2">🥉</div>
+              <div class="text-sm font-bold text-white mb-1">{{ leaderboard[2].username }}</div>
+              <div class="text-xs text-neutral-400 mb-3">#3 Rank</div>
+              <div class="space-y-1">
+                <div class="text-lg font-bold text-yellow-400">{{ formatCurrency(leaderboard[2].totalEarnings) }}</div>
+                <div class="text-xs text-neutral-400">{{ leaderboard[2].gamesPlayed }} games</div>
               </div>
             </div>
           </div>
-          </template>
         </div>
 
-        <!-- Rest of Leaderboard -->
-        <div class="bg-neutral-800/40 border border-neutral-700 rounded-xl p-4">
-          <div v-if="leaderboard.length > 3" class="space-y-2">
-            <div v-for="player in leaderboard.slice(3)" :key="player.username" class="p-4 bg-neutral-800/60 border border-neutral-700 rounded-lg flex items-center justify-between hover:border-neutral-600 transition">
-              <!-- Rank & Player -->
-              <div class="flex items-center gap-4 flex-1">
-                <div class="w-10 h-10 flex items-center justify-center rounded-lg bg-neutral-700 font-bold text-neutral-300 text-sm">
-                  #{{ player.rank }}
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class="font-bold text-white text-sm">{{ player.username }}</div>
-                  <div class="text-xs text-neutral-400">{{ player.gamesPlayed }} games played</div>
-                </div>
-              </div>
+        <!-- Your Ranking Section -->
+        <div v-if="appStore.currentUser" class="bg-neutral-800 border border-indigo-500 rounded-lg p-4">
+          <h2 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+            <Trophy :size="16" class="text-indigo-400" /> Your Ranking
+          </h2>
+          <div v-if="userRanking" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-neutral-900 rounded-lg p-3 text-center border border-neutral-700">
+              <div class="text-xs text-neutral-400 mb-2">Your Rank</div>
+              <div class="text-2xl font-bold text-indigo-400">#{{ userRanking.rank }}</div>
+            </div>
+            <div class="bg-neutral-900 rounded-lg p-3 text-center border border-neutral-700">
+              <div class="text-xs text-neutral-400 mb-2">Total Earnings</div>
+              <div class="text-lg font-bold text-yellow-400">{{ formatCurrency(userRanking.totalEarnings) }}</div>
+            </div>
+            <div class="bg-neutral-900 rounded-lg p-3 text-center border border-neutral-700">
+              <div class="text-xs text-neutral-400 mb-2">Games Played</div>
+              <div class="text-lg font-bold text-green-400">{{ userRanking.gamesPlayed }}</div>
+            </div>
+            <div class="bg-neutral-900 rounded-lg p-3 text-center border border-neutral-700">
+              <div class="text-xs text-neutral-400 mb-2">Best Score</div>
+              <div class="text-lg font-bold text-purple-400">{{ formatCurrency(userRanking.highestScore) }}</div>
+            </div>
+          </div>
+          <div v-else class="text-center py-4 text-neutral-400 text-sm">
+            Play some games to appear on the leaderboard!
+          </div>
+        </div>
 
-              <!-- Stats -->
-              <div class="hidden sm:grid sm:grid-cols-3 gap-6 text-right ml-4">
-                <div>
-                  <div class="text-xs text-neutral-400">Earnings</div>
+        <!-- Top 100 Leaderboard -->
+        <div class="bg-neutral-800 border border-neutral-700 rounded-lg p-4">
+          <h2 class="text-base font-bold text-white mb-4">📊 Top 100 Players</h2>
+          <div v-if="leaderboard.length > 3" class="space-y-2">
+            <!-- Table Header (Desktop) -->
+            <div class="hidden md:grid md:grid-cols-12 gap-4 px-3 py-2 text-xs text-neutral-400 font-semibold border-b border-neutral-700">
+              <div class="col-span-1">Rank</div>
+              <div class="col-span-4">Player</div>
+              <div class="col-span-2 text-right">Earnings</div>
+              <div class="col-span-2 text-right">Best Score</div>
+              <div class="col-span-3 text-right">Games</div>
+            </div>
+
+            <!-- Player Rows -->
+            <div v-for="player in leaderboard.slice(3)" :key="player.username" class="bg-neutral-900 border border-neutral-700 rounded-lg p-3 hover:border-neutral-600 transition">
+              <div class="hidden md:grid md:grid-cols-12 gap-4 items-center">
+                <div class="col-span-1 font-bold text-white text-sm">#{{ player.rank }}</div>
+                <div class="col-span-4">
+                  <div class="font-semibold text-white text-sm">{{ player.username }}</div>
+                </div>
+                <div class="col-span-2 text-right">
                   <div class="font-bold text-yellow-400 text-sm">{{ formatCurrency(player.totalEarnings) }}</div>
                 </div>
-                <div>
-                  <div class="text-xs text-neutral-400">Best</div>
+                <div class="col-span-2 text-right">
                   <div class="font-bold text-green-400 text-sm">{{ formatCurrency(player.highestScore) }}</div>
                 </div>
-                <div>
-                  <div class="text-xs text-neutral-400">Avg</div>
-                  <div class="font-bold text-purple-400 text-sm">{{ formatCurrency(Math.round(player.totalEarnings / Math.max(1, player.gamesPlayed))) }}</div>
+                <div class="col-span-3 text-right">
+                  <div class="text-neutral-400 text-sm">{{ player.gamesPlayed }}</div>
                 </div>
               </div>
 
-              <!-- Mobile Stats -->
-              <div class="sm:hidden text-right ml-2">
-                <div class="font-bold text-yellow-400 text-sm">{{ formatCurrency(player.totalEarnings) }}</div>
-                <div class="text-xs text-neutral-400">earnings</div>
+              <!-- Mobile View -->
+              <div class="md:hidden flex items-center justify-between">
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="font-bold text-white text-sm bg-neutral-700 rounded px-2 py-1 w-8 h-8 flex items-center justify-center">#{{ player.rank }}</div>
+                  <div>
+                    <div class="font-semibold text-white text-sm">{{ player.username }}</div>
+                    <div class="text-xs text-neutral-400">{{ player.gamesPlayed }} games</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-bold text-yellow-400 text-sm">{{ formatCurrency(player.totalEarnings) }}</div>
+                  <div class="text-xs text-neutral-400">earnings</div>
+                </div>
               </div>
             </div>
+          </div>
+          <div v-else class="text-center py-6 text-neutral-400 text-sm">
+            No additional players to display
           </div>
         </div>
       </div>
 
       <!-- Footer -->
-      <div v-if="!loading && leaderboard.length > 0" class="mt-8 text-center text-neutral-400 text-sm border-t border-neutral-700 pt-4">
+      <div v-if="!loading && leaderboard.length > 0" class="mt-6 text-center text-neutral-400 text-xs border-t border-neutral-700 pt-3">
         Showing top {{ leaderboard.length }} of {{ totalPlayers }} players worldwide
       </div>
 
       <!-- Back Button -->
-      <router-link to="/" class="mt-6 block text-center text-indigo-400 hover:text-indigo-300 font-medium text-sm flex items-center justify-center gap-2">
-        <ArrowLeft :size="16" /> Back to Home
+      <router-link to="/" class="mt-4 block text-center text-indigo-400 hover:text-indigo-300 font-medium text-xs flex items-center justify-center gap-2">
+        <ArrowLeft :size="14" /> Back to Home
       </router-link>
     </div>
   </div>
@@ -137,7 +170,8 @@ import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { API_BASE_URL } from '../config'
 import { formatCurrency } from '../utils/constants'
-import { Trophy, Gamepad2, Medal, ArrowLeft } from 'lucide-vue-next'
+import { Trophy, Gamepad2, ArrowLeft } from 'lucide-vue-next'
+import { useAppStore } from '../stores/appStore'
 
 interface LeaderboardEntry {
   rank: number
@@ -147,7 +181,9 @@ interface LeaderboardEntry {
   highestScore: number
 }
 
+const appStore = useAppStore()
 const leaderboard = ref<LeaderboardEntry[]>([])
+const userRanking = ref<LeaderboardEntry | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 const totalPlayers = ref(0)
@@ -156,9 +192,25 @@ const loadLeaderboard = async () => {
   loading.value = true
   error.value = null
   try {
-    const response = await axios.get(`${API_BASE_URL}/leaderboard`)
+    // Fetch top 100 leaderboard
+    const response = await axios.get(`${API_BASE_URL}/leaderboard?limit=100`)
     leaderboard.value = response.data.leaderboard
     totalPlayers.value = response.data.totalPlayers
+
+    // If user is logged in, fetch their ranking
+    if (appStore.currentUser) {
+      try {
+        const userResponse = await axios.get(`${API_BASE_URL}/leaderboard?limit=10000`)
+        const allPlayers = userResponse.data.leaderboard
+        const currentUserRank = allPlayers.find((player: LeaderboardEntry) => player.username === appStore.currentUser?.username)
+        if (currentUserRank) {
+          userRanking.value = currentUserRank
+        }
+      } catch (userErr) {
+        console.error('Failed to fetch user ranking:', userErr)
+        // User might not be in leaderboard yet, which is fine
+      }
+    }
   } catch (err: any) {
     error.value = err.response?.data?.error || 'Failed to load leaderboard'
   } finally {

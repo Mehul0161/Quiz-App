@@ -12,36 +12,36 @@
       </div>
 
       <div v-else-if="userStats">
-        <div class="text-center mb-6">
-          <div class="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full grid place-items-center text-white text-2xl font-bold shadow-lg mx-auto mb-3">
+        <div class="text-center mb-4">
+          <div class="w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full grid place-items-center text-white text-lg font-bold shadow-lg mx-auto mb-2">
             {{ userStore.currentUser?.username.charAt(0).toUpperCase() }}
           </div>
-          <h1 class="text-2xl md:text-3xl font-bold text-white">
+          <h1 class="text-xl md:text-2xl font-bold text-white">
             {{ userStore.currentUser?.username }}'s Statistics
           </h1>
         </div>
 
         <!-- Key Stats Cards -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <div class="card-compact p-3 text-center border-2 border-yellow-500/30 bg-yellow-500/5">
-            <div class="mb-1 flex justify-center"><Coins :size="32" class="text-yellow-400" /></div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <div class="card-compact p-2.5 text-center border-2 border-yellow-500/30 bg-yellow-500/5">
+            <div class="mb-0.5 flex justify-center"><Coins :size="24" class="text-yellow-400" /></div>
             <div class="text-xs text-neutral-300">Total Earnings</div>
-            <div class="text-lg font-bold text-yellow-400">${{ userStats.totalEarnings?.toLocaleString() || 0 }}</div>
+            <div class="text-base font-bold text-yellow-400">${{ userStats.totalEarnings?.toLocaleString() || 0 }}</div>
           </div>
-          <div class="card-compact p-3 text-center border-2 border-blue-500/30 bg-blue-500/5">
-            <div class="mb-1 flex justify-center"><Gamepad2 :size="32" class="text-blue-400" /></div>
+          <div class="card-compact p-2.5 text-center border-2 border-blue-500/30 bg-blue-500/5">
+            <div class="mb-0.5 flex justify-center"><Gamepad2 :size="24" class="text-blue-400" /></div>
             <div class="text-xs text-neutral-300">Games Played</div>
-            <div class="text-lg font-bold text-blue-400">{{ userStats.gamesPlayed || 0 }}</div>
+            <div class="text-base font-bold text-blue-400">{{ userStats.gamesPlayed || 0 }}</div>
           </div>
-          <div class="card-compact p-3 text-center border-2 border-green-500/30 bg-green-500/5">
-            <div class="mb-1 flex justify-center"><Trophy :size="32" class="text-green-400" /></div>
+          <div class="card-compact p-2.5 text-center border-2 border-green-500/30 bg-green-500/5">
+            <div class="mb-0.5 flex justify-center"><Trophy :size="24" class="text-green-400" /></div>
             <div class="text-xs text-neutral-300">Highest Score</div>
-            <div class="text-lg font-bold text-green-400">${{ userStats.highestScore?.toLocaleString() || 0 }}</div>
+            <div class="text-base font-bold text-green-400">${{ userStats.highestScore?.toLocaleString() || 0 }}</div>
           </div>
-          <div class="card-compact p-3 text-center border-2 border-purple-500/30 bg-purple-500/5">
-            <div class="mb-1 flex justify-center"><TrendingUp :size="32" class="text-purple-400" /></div>
+          <div class="card-compact p-2.5 text-center border-2 border-purple-500/30 bg-purple-500/5">
+            <div class="mb-0.5 flex justify-center"><TrendingUp :size="24" class="text-purple-400" /></div>
             <div class="text-xs text-neutral-300">Win Rate</div>
-            <div class="text-lg font-bold text-purple-400">{{ getWinRate() }}%</div>
+            <div class="text-base font-bold text-purple-400">{{ getWinRate() }}%</div>
           </div>
         </div>
 

@@ -5,10 +5,10 @@
 			<div class="mb-10">
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h1 class="text-4xl sm:text-5xl font-bold text-white mb-2">
+                    <h1 class="text-2xl sm:text-3xl font-bold text-white mb-2">
                         Welcome, <span class="text-yellow-400">{{ appStore.isGuest ? 'Guest' : (appStore.currentUser?.username || 'Guest') }}</span>
                     </h1>
-						<p class="text-neutral-300 text-base font-medium">Ready to climb the leaderboard?</p>
+						<p class="text-neutral-300 text-sm font-medium">Ready to climb the leaderboard?</p>
 					</div>
                 <div class="flex items-center gap-3">
                     <button v-if="appStore.isGuest" @click="router.push({ path: '/', query: { auth: '1' } })" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition">
@@ -21,70 +21,70 @@
 			<!-- Main Stats Grid -->
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
 				<!-- Total Earnings -->
-				<div class="p-6 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-yellow-500/50 transition-all duration-300">
-					<div class="flex items-center gap-2 mb-3">
-						<div class="p-2 bg-yellow-500/10 rounded-lg"><Coins :size="18" class="text-yellow-400" /></div>
-						<div class="text-sm text-neutral-300 font-semibold">Total Earnings</div>
+				<div class="p-4 bg-neutral-900 border border-neutral-800 rounded-lg hover:border-yellow-500/50 transition-all duration-300">
+					<div class="flex items-center gap-2 mb-2">
+						<div class="p-1.5 bg-yellow-500/10 rounded"><Coins :size="16" class="text-yellow-400" /></div>
+						<div class="text-xs text-neutral-300 font-semibold">Total Earnings</div>
 					</div>
-					<div class="text-3xl font-bold text-yellow-400 mb-2">{{ formatCurrency(appStore.currentUser?.totalEarnings || 0) }}</div>
+					<div class="text-2xl font-bold text-yellow-400 mb-1">{{ formatCurrency(appStore.currentUser?.totalEarnings || 0) }}</div>
 					<div class="text-xs text-neutral-400">{{ appStore.currentUser?.gamesPlayed || 0 }} games played</div>
 				</div>
 
 				<!-- Games Played -->
-				<div class="p-6 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-green-500/50 transition-all duration-300">
-					<div class="flex items-center gap-2 mb-3">
-						<div class="p-2 bg-green-500/10 rounded-lg"><Gamepad2 :size="18" class="text-green-400" /></div>
-						<div class="text-sm text-neutral-300 font-semibold">Games Played</div>
+				<div class="p-4 bg-neutral-900 border border-neutral-800 rounded-lg hover:border-green-500/50 transition-all duration-300">
+					<div class="flex items-center gap-2 mb-2">
+						<div class="p-1.5 bg-green-500/10 rounded"><Gamepad2 :size="16" class="text-green-400" /></div>
+						<div class="text-xs text-neutral-300 font-semibold">Games Played</div>
 					</div>
-					<div class="text-3xl font-bold text-green-400 mb-2">{{ appStore.currentUser?.gamesPlayed || 0 }}</div>
+					<div class="text-2xl font-bold text-green-400 mb-1">{{ appStore.currentUser?.gamesPlayed || 0 }}</div>
 					<div class="text-xs text-neutral-400">Avg: {{ getAverageScore() }}</div>
 				</div>
 
 				<!-- Best Score -->
-				<div class="p-6 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-purple-500/50 transition-all duration-300">
-					<div class="flex items-center gap-2 mb-3">
-						<div class="p-2 bg-purple-500/10 rounded-lg"><Trophy :size="18" class="text-purple-400" /></div>
-						<div class="text-sm text-neutral-300 font-semibold">Best Score</div>
+				<div class="p-4 bg-neutral-900 border border-neutral-800 rounded-lg hover:border-purple-500/50 transition-all duration-300">
+					<div class="flex items-center gap-2 mb-2">
+						<div class="p-1.5 bg-purple-500/10 rounded"><Trophy :size="16" class="text-purple-400" /></div>
+						<div class="text-xs text-neutral-300 font-semibold">Best Score</div>
 					</div>
-					<div class="text-3xl font-bold text-purple-400 mb-2">{{ formatCurrency(appStore.currentUser?.highestScore || 0) }}</div>
+					<div class="text-2xl font-bold text-purple-400 mb-1">{{ formatCurrency(appStore.currentUser?.highestScore || 0) }}</div>
 					<div class="text-xs text-neutral-400">Personal best</div>
 				</div>
 
 				<!-- Achievements -->
-				<div class="p-6 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-indigo-500/50 transition-all duration-300">
-					<div class="flex items-center gap-2 mb-3">
-						<div class="p-2 bg-indigo-500/10 rounded-lg"><Star :size="18" class="text-indigo-400" /></div>
-						<div class="text-sm text-neutral-300 font-semibold">Achievements</div>
+				<div class="p-4 bg-neutral-900 border border-neutral-800 rounded-lg hover:border-indigo-500/50 transition-all duration-300">
+					<div class="flex items-center gap-2 mb-2">
+						<div class="p-1.5 bg-indigo-500/10 rounded"><Star :size="16" class="text-indigo-400" /></div>
+						<div class="text-xs text-neutral-300 font-semibold">Achievements</div>
 					</div>
-					<div class="text-3xl font-bold text-indigo-400 mb-2">{{ appStore.currentUser?.achievements?.length || 0 }}</div>
+					<div class="text-2xl font-bold text-indigo-400 mb-1">{{ appStore.currentUser?.achievements?.length || 0 }}</div>
 					<div class="text-xs text-neutral-400 truncate" v-if="appStore.currentUser?.achievements?.length">{{ appStore.currentUser.achievements.join(', ') }}</div>
 				</div>
 			</div>
 
 			<!-- Quick Actions -->
 			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-				<router-link to="/setup" class="p-6 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-indigo-500/50 transition-all duration-300 hover:shadow-lg">
-					<div class="mb-4 flex justify-center">
-						<div class="p-3 bg-indigo-500/10 rounded-lg"><Gamepad2 :size="32" class="text-indigo-400" /></div>
+				<router-link to="/setup" class="p-4 bg-neutral-900 border border-neutral-800 rounded-lg hover:border-indigo-500/50 transition-all duration-300 hover:shadow-lg">
+					<div class="mb-3 flex justify-center">
+						<div class="p-2 bg-indigo-500/10 rounded"><Gamepad2 :size="24" class="text-indigo-400" /></div>
 					</div>
-					<h3 class="text-lg font-bold text-white mb-2">Play Now</h3>
-					<p class="text-neutral-400 text-sm">Start a new game and earn virtual money</p>
+					<h3 class="text-base font-bold text-white mb-1">Play Now</h3>
+					<p class="text-neutral-400 text-xs">Start a new game and earn virtual money</p>
 				</router-link>
 
-				<router-link to="/leaderboard" class="p-6 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-yellow-500/50 transition-all duration-300 hover:shadow-lg">
-					<div class="mb-4 flex justify-center">
-						<div class="p-3 bg-yellow-500/10 rounded-lg"><Trophy :size="32" class="text-yellow-400" /></div>
+				<router-link to="/leaderboard" class="p-4 bg-neutral-900 border border-neutral-800 rounded-lg hover:border-yellow-500/50 transition-all duration-300 hover:shadow-lg">
+					<div class="mb-3 flex justify-center">
+						<div class="p-2 bg-yellow-500/10 rounded"><Trophy :size="24" class="text-yellow-400" /></div>
 					</div>
-					<h3 class="text-lg font-bold text-white mb-2">Leaderboard</h3>
-					<p class="text-neutral-400 text-sm">See where you rank globally</p>
+					<h3 class="text-base font-bold text-white mb-1">Leaderboard</h3>
+					<p class="text-neutral-400 text-xs">See where you rank globally</p>
 				</router-link>
 
-				<router-link to="/statistics" class="p-6 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-green-500/50 transition-all duration-300 hover:shadow-lg">
-					<div class="mb-4 flex justify-center">
-						<div class="p-3 bg-green-500/10 rounded-lg"><BarChart3 :size="32" class="text-green-400" /></div>
+				<router-link to="/statistics" class="p-4 bg-neutral-900 border border-neutral-800 rounded-lg hover:border-green-500/50 transition-all duration-300 hover:shadow-lg">
+					<div class="mb-3 flex justify-center">
+						<div class="p-2 bg-green-500/10 rounded"><BarChart3 :size="24" class="text-green-400" /></div>
 					</div>
-					<h3 class="text-lg font-bold text-white mb-2">Statistics</h3>
-					<p class="text-neutral-400 text-sm">View detailed game history</p>
+					<h3 class="text-base font-bold text-white mb-1">Statistics</h3>
+					<p class="text-neutral-400 text-xs">View detailed game history</p>
 				</router-link>
 			</div>
 

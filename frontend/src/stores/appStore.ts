@@ -61,7 +61,7 @@ const gameModes: GameMode[] = [
 ]
 
 const prizeStructure = [100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000, 250000, 500000, 1000000]
-const rapidFirePrizeStructure = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75]
+const rapidFirePrizeStructure = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
 
 type AppState = {
   // Auth
@@ -102,6 +102,11 @@ type AppState = {
   completeGame: (finalScore?: number) => Promise<void>
   resetGame: () => void
   addGuestGameRecord: (record: { score: number; gameMode: string; category: string; questionsAnswered: number }) => void
+  
+  // Question Tracking (Session Storage)
+  getExcludedQuestions: (category: string) => string[]
+  storeUsedQuestions: (category: string, questions: Question[]) => void
+  clearQuestionSession: (category?: string) => void
 }
 
 const store = createStore<AppState>()((set, get) => {
@@ -295,9 +300,14 @@ const store = createStore<AppState>()((set, get) => {
       
       console.log('Starting quiz:', { category: selectedCategory, mode: selectedMode })
       
+      // Get previously used questions from session storage
+      const excludeQuestionIds = get().getExcludedQuestions(selectedCategory)
+      console.log(`Excluding ${excludeQuestionIds.length} previously used questions`)
+      
       const response = await axios.post(`${API_BASE_URL}/quizzes/start`, {
         category: selectedCategory,
-        mode: selectedMode
+        mode: selectedMode,
+        excludeQuestionIds: excludeQuestionIds
       })
       
       console.log('Quiz response received:', response.data)
@@ -310,6 +320,9 @@ const store = createStore<AppState>()((set, get) => {
       }
       
       console.log(`Received ${fetchedQuestions.length} questions`)
+      
+      // Store the used questions in session storage
+      get().storeUsedQuestions(selectedCategory, fetchedQuestions)
       
       if (mode.id === 'rapidfire') fetchedQuestions = fetchedQuestions.sort(() => Math.random() - 0.5)
       
@@ -407,6 +420,59 @@ const store = createStore<AppState>()((set, get) => {
     const list = raw ? JSON.parse(raw) : []
     list.push({ gameId: crypto.randomUUID(), ...record, playedAt: new Date().toISOString() })
     if (typeof window !== 'undefined') localStorage.setItem('quiz_guest_history', JSON.stringify(list))
+  },
+
+  // Question Tracking - Session Storage Methods
+  getExcludedQuestions: (category: string) => {
+    if (typeof window === 'undefined') return []
+    try {
+      const sessionData = JSON.parse(sessionStorage.getItem('quizSessionData') || '{}')
+      return sessionData[category]?.usedQuestionIds || []
+    } catch (err) {
+      console.error('Error reading excluded questions:', err)
+      return []
+    }
+  },
+
+  storeUsedQuestions: (category: string, questions: Question[]) => {
+    if (typeof window === 'undefined') return
+    try {
+      const sessionData = JSON.parse(sessionStorage.getItem('quizSessionData') || '{}')
+      
+      if (!sessionData[category]) {
+        sessionData[category] = {
+          usedQuestionIds: [],
+          lastPlayedAt: Date.now(),
+          mode: null
+        }
+      }
+      
+      const questionIds = questions.map(q => q.id)
+      sessionData[category].usedQuestionIds.push(...questionIds)
+      sessionData[category].lastPlayedAt = Date.now()
+      
+      sessionStorage.setItem('quizSessionData', JSON.stringify(sessionData))
+      console.log(`Stored ${questionIds.length} used questions for category: ${category}`)
+    } catch (err) {
+      console.error('Error storing used questions:', err)
+    }
+  },
+
+  clearQuestionSession: (category?: string) => {
+    if (typeof window === 'undefined') return
+    try {
+      if (category) {
+        const sessionData = JSON.parse(sessionStorage.getItem('quizSessionData') || '{}')
+        delete sessionData[category]
+        sessionStorage.setItem('quizSessionData', JSON.stringify(sessionData))
+        console.log(`Cleared question session for category: ${category}`)
+      } else {
+        sessionStorage.removeItem('quizSessionData')
+        console.log('Cleared all question sessions')
+      }
+    } catch (err) {
+      console.error('Error clearing question session:', err)
+    }
   }
   }
 })

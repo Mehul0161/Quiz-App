@@ -2,36 +2,36 @@
 	<div class="min-h-screen bg-neutral-950 p-4">
 		<div class="max-w-4xl mx-auto">
 			<!-- Header -->
-            <div class="text-center mb-6">
-                <div class="w-20 h-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full grid place-items-center text-white text-2xl font-bold shadow-lg mx-auto mb-3">
+            <div class="text-center mb-4">
+                <div class="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full grid place-items-center text-white text-xl font-bold shadow-lg mx-auto mb-2">
                     {{ (appStore.isGuest ? 'G' : (appStore.currentUser?.username?.charAt(0) || 'U')).toUpperCase() }}
                 </div>
-                <h1 class="text-2xl md:text-3xl font-bold text-white mb-1">{{ appStore.isGuest ? 'Guest' : (appStore.currentUser?.username || 'Guest') }}</h1>
-                <p v-if="!appStore.isGuest" class="text-neutral-400 text-sm">Member since {{ formatDate(appStore.currentUser?.createdAt) }}</p>
-                <p v-else class="text-neutral-400 text-sm">Browsing as Guest</p>
+                <h1 class="text-xl md:text-2xl font-bold text-white mb-0.5">{{ appStore.isGuest ? 'Guest' : (appStore.currentUser?.username || 'Guest') }}</h1>
+                <p v-if="!appStore.isGuest" class="text-neutral-400 text-xs">Member since {{ formatDate(appStore.currentUser?.createdAt) }}</p>
+                <p v-else class="text-neutral-400 text-xs">Browsing as Guest</p>
             </div>
 
 			<!-- Stats Grid -->
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
 				<div class="card-compact border-2 border-yellow-500/30 bg-yellow-500/5 text-center">
-					<div class="mb-1 flex justify-center"><Coins :size="32" class="text-yellow-400" /></div>
-					<div class="text-xs text-neutral-300 mb-1">Total Earnings</div>
-                    <div class="text-lg font-bold text-yellow-400">${{ (appStore.isGuest ? guestTotals.totalEarnings : (appStore.currentUser?.totalEarnings || 0)) .toLocaleString() }}</div>
+					<div class="mb-0.5 flex justify-center"><Coins :size="24" class="text-yellow-400" /></div>
+					<div class="text-xs text-neutral-300 mb-0.5">Total Earnings</div>
+                    <div class="text-base font-bold text-yellow-400">${{ (appStore.isGuest ? guestTotals.totalEarnings : (appStore.currentUser?.totalEarnings || 0)) .toLocaleString() }}</div>
 				</div>
 				<div class="card-compact border-2 border-blue-500/30 bg-blue-500/5 text-center">
-					<div class="mb-1 flex justify-center"><Gamepad2 :size="32" class="text-blue-400" /></div>
-					<div class="text-xs text-neutral-300 mb-1">Games Played</div>
-                    <div class="text-lg font-bold text-blue-400">{{ appStore.isGuest ? guestTotals.gamesPlayed : (appStore.currentUser?.gamesPlayed || 0) }}</div>
+					<div class="mb-0.5 flex justify-center"><Gamepad2 :size="24" class="text-blue-400" /></div>
+					<div class="text-xs text-neutral-300 mb-0.5">Games Played</div>
+                    <div class="text-base font-bold text-blue-400">{{ appStore.isGuest ? guestTotals.gamesPlayed : (appStore.currentUser?.gamesPlayed || 0) }}</div>
 				</div>
 				<div class="card-compact border-2 border-green-500/30 bg-green-500/5 text-center">
-					<div class="mb-1 flex justify-center"><Trophy :size="32" class="text-green-400" /></div>
-					<div class="text-xs text-neutral-300 mb-1">Best Score</div>
-                    <div class="text-lg font-bold text-green-400">${{ (appStore.isGuest ? guestTotals.highestScore : (appStore.currentUser?.highestScore || 0)).toLocaleString() }}</div>
+					<div class="mb-0.5 flex justify-center"><Trophy :size="24" class="text-green-400" /></div>
+					<div class="text-xs text-neutral-300 mb-0.5">Best Score</div>
+                    <div class="text-base font-bold text-green-400">${{ (appStore.isGuest ? guestTotals.highestScore : (appStore.currentUser?.highestScore || 0)).toLocaleString() }}</div>
 				</div>
 				<div class="card-compact border-2 border-purple-500/30 bg-purple-500/5 text-center">
-					<div class="mb-1 flex justify-center"><TrendingUp :size="32" class="text-purple-400" /></div>
-					<div class="text-xs text-neutral-300 mb-1">Win Rate</div>
-					<div class="text-lg font-bold text-purple-400">{{ getWinRate() }}%</div>
+					<div class="mb-0.5 flex justify-center"><TrendingUp :size="24" class="text-purple-400" /></div>
+					<div class="text-xs text-neutral-300 mb-0.5">Win Rate</div>
+					<div class="text-base font-bold text-purple-400">{{ getWinRate() }}%</div>
 				</div>
 			</div>
 
